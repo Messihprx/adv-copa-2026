@@ -309,7 +309,7 @@ function propagateBracket(){
     const r16=BRACKET.round16.find(x=>x.id===m.r16);
     if(!r16)continue;
     if(!bracketState.round16[r16.id])bracketState.round16[r16.id]={home:null,away:null,winner:null};
-    bracketState.round16[r16.id][r16.side]=s.winner;
+    bracketState.round16[r16.id][m.side]=s.winner;
   }
   for(const m of BRACKET.round16){
     const s=bracketState.round16[m.id];
@@ -317,7 +317,7 @@ function propagateBracket(){
     const q=BRACKET.quarters.find(x=>x.id===m.qf);
     if(!q)continue;
     if(!bracketState.quarters[q.id])bracketState.quarters[q.id]={home:null,away:null,winner:null};
-    bracketState.quarters[q.id][q.side]=s.winner;
+    bracketState.quarters[q.id][m.side]=s.winner;
   }
   for(const m of BRACKET.quarters){
     const s=bracketState.quarters[m.id];
@@ -325,8 +325,17 @@ function propagateBracket(){
     const sf=BRACKET.semis.find(x=>x.id===m.sf);
     if(!sf)continue;
     if(!bracketState.semis[sf.id])bracketState.semis[sf.id]={home:null,away:null,winner:null};
-    bracketState.semis[sf.id][sf.side]=s.winner;
+    bracketState.semis[sf.id][m.side]=s.winner;
   }
+  for(const m of BRACKET.semis){
+    const s=bracketState.semis[m.id];
+    if(!s||!s.winner)continue;
+    const side=m.id===101?'home':'away';
+    bracketState.final[side]=s.winner;
+  }
+  const s1=bracketState.semis[101],s2=bracketState.semis[102];
+  if(s1&&s1.winner&&s1.home&&s1.away)bracketState.third.home=s1.home===s1.winner?s1.away:s1.home;
+  if(s2&&s2.winner&&s2.home&&s2.away)bracketState.third.away=s2.home===s2.winner?s2.away:s2.home;
 }
 
 function getGroupIdFromTeam(tid){
@@ -426,6 +435,17 @@ function selectKnockoutWinner(round,matchId,teamId){
   if(round==='semis'){
     const side=matchId===101?'home':'away';
     bracketState.final[side]=teamId;bracketState.final.winner=null;
+    const m=bracketState.semis[matchId];
+    if(m&&m.home&&m.away){
+      const loser=m.home===teamId?m.away:m.home;
+      if(matchId===101)bracketState.third.home=loser;
+      else bracketState.third.away=loser;
+    }
+    bracketState.third.winner=null;
+  }
+  if(round==='third'&&matchId===103){
+    bracketState.third.winner=teamId;
+    renderBracket();return;
   }
   renderBracket();
 }
@@ -475,11 +495,11 @@ function renderBracket(){
   const fs=bracketState.final||{},fh=getTeam(fs.home),fa=getTeam(fs.away),fw=getTeam(fs.winner);
   const ts=bracketState.third||{},th=getTeam(ts.home),ta=getTeam(ts.away),tw=getTeam(ts.winner);
   h+=`<div class="bcol bcol-final"><div class="brl">Finais</div>
-    <div class="third-match"><div class="ml bronze">3\u00ba</div>${th?mc(th.id):'<div class="ms">---</div>'}<div class="msep">VS</div>${ta?mc(ta.id):'<div class="ms">---</div>'}${tw?`<div class="mt">${flagImg(tw.name,14)}${tw.name}</div>`:''}</div>
+    <div class="third-match"><div class="ml bronze">3\u00ba</div>${th?mc(th.id,th&&!tw&&!lockedMatches.includes(103)?`selectKnockoutWinner('third',103,${th.id})`:null,tw&&tw.id==th.id):'<div class="ms">---</div>'}<div class="msep">VS</div>${ta?mc(ta.id,ta&&!tw&&!lockedMatches.includes(103)?`selectKnockoutWinner('third',103,${ta.id})`:null,tw&&tw.id==ta.id):'<div class="ms">---</div>'}${tw?`<div class="mt bronze">\uD83E\uDD49${flagImg(tw.name,14)}${tw.name}</div>`:''}${lockedMatches.includes(103)?'<div class="mlock">\uD83D\uDD12</div>':''}</div>
     <div class="final-match"><div class="ml gold">\uD83C\uDFC6Final</div>
-      ${mc(fs.home,fh&&!fs.winner?`selectKnockoutWinner('final',104,${fs.home})`:null,fw&&fw.id==fs.home)}
-      <div class="fs"><input type="number" min="0" max="20" class="si" id="fhScore" value="${fs.homeScore||''}" placeholder="0" onchange="updateFinalScore()"><span class="svs">x</span><input type="number" min="0" max="20" class="si" id="faScore" value="${fs.awayScore||''}" placeholder="0" onchange="updateFinalScore()"></div>
-      ${mc(fs.away,fa&&!fs.winner?`selectKnockoutWinner('final',104,${fs.away})`:null,fw&&fw.id==fs.away)}
+      <div class="final-team-score-row">${mc(fs.home,fh&&!fs.winner?`selectKnockoutWinner('final',104,${fs.home})`:null,fw&&fw.id==fs.home)}<input type="number" min="0" max="20" class="si" id="fhScore" value="${fs.homeScore||''}" placeholder="0" onchange="updateFinalScore()"></div>
+      <div class="msep">VS</div>
+      <div class="final-team-score-row">${mc(fs.away,fa&&!fs.winner?`selectKnockoutWinner('final',104,${fs.away})`:null,fw&&fw.id==fs.away)}<input type="number" min="0" max="20" class="si" id="faScore" value="${fs.awayScore||''}" placeholder="0" onchange="updateFinalScore()"></div>
       ${fw?`<div class="mt champ">\uD83C\uDFC6${flagImg(fw.name,20)}${fw.name}</div>`:''}
     </div></div>`;
   h+=`</div></div>`;
