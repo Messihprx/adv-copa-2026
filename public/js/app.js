@@ -468,7 +468,7 @@ function renderBracket(){
     const locked=lockedMatches.includes(m.id);
     const is3=isSlotThird(m.away);
     const hc=ht&&!locked?`selectKnockoutWinner('round32',${m.id},${ht})`:null;
-    const ac=at&&!locked&&!is3?`selectKnockoutWinner('round32',${m.id},${at})`:null;
+    const ac=at&&!locked?`selectKnockoutWinner('round32',${m.id},${at})`:null;
     return`<div class="match">${mc(ht,hc,wn&&wn==ht)}<div class="msep"><span class="ml">${m.label}</span>${wn&&wn==ht?'<span class="mx">\u2714</span>':'VS'}</div>${mc(at,ac,wn&&wn==at)}${locked?'<div class="mlock">\uD83D\uDD12</div>':''}</div>`;
   }
   function col(matches,roundKey,roundLabel){
@@ -580,9 +580,10 @@ function startMatchTimer(mid){
     if(parts.length<2){d.textContent='';return;}
     const [mo,da,ye]=parts[0].split('/');
     const [hh,mi]=parts[1].split(':');
-    const matchTime=new Date(parseInt(ye),parseInt(mo)-1,parseInt(da),parseInt(hh),parseInt(mi));
-    const now=new Date();
-    const diff=matchTime-now;
+    const stdTz=STADIUM_TZ[match.stadium_id]||-5;
+    const matchUtc=Date.UTC(parseInt(ye),parseInt(mo)-1,parseInt(da),parseInt(hh)-stdTz,parseInt(mi));
+    const now=Date.now();
+    const diff=matchUtc-now;
     if(diff<=0){d.textContent='⏰ Jogo começou!';matchModalLocked=true;clearInterval(matchTimerInterval);matchTimerInterval=null;return;}
     if(diff<60000){d.textContent='⏰ Menos de 1 minuto!';matchModalLocked=true;}
     else{
@@ -621,10 +622,10 @@ async function renderLiveMatches(){
         ${liveCardBadge('live')}
         <div class="live-teams">
           <div class="live-team">${liveFlagImg(homeN)}<span class="team-name">${homeN}</span></div>
-          <div class="live-score-row"><span class="live-score big">${hs}</span><span class="live-score big">${as}</span></div>
+          <div class="live-score-row"><span class="live-score big">${hs}</span><span class="live-score-sep">x</span><span class="live-score big">${as}</span></div>
           <div class="live-team"><span class="team-name">${awayN}</span>${liveFlagImg(awayN)}</div>
         </div>
-        <div class="live-meta"><span class="live-stage">${STAGE_NAMES[m.type]||m.group||''}</span>${m.time_elapsed?`<span class="live-time-elapsed">${m.time_elapsed}</span>`:''}</div>
+        <div class="live-meta"><span class="live-stage">${STAGE_NAMES[m.type]||m.group||''}</span><span class="live-meta-right">${m.local_date?`<span class="live-time">${parseBrasilia(m.local_date,m.stadium_id)}</span>`:''}${m.time_elapsed?`<span class="live-time-elapsed">${m.time_elapsed}</span>`:''}</span></div>
         ${userPredictionHtml(parseInt(m.id),homeN,awayN)}
       </div>`;
     }
