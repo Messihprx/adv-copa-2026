@@ -435,7 +435,7 @@ async function calculateUserFullScore(userId, matches) {
   if (thirdMatch) {
     const winner = getKnockoutWinner(thirdMatch);
     if (winner) {
-      const pred = koMap['m103'];
+      const pred = koMap['third'];
       if (pred && pred.team_id == winner) {
         breakdown.push({
           category: 'third_place', reference_id: 'm103', subreference_id: String(winner),
