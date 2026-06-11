@@ -1440,6 +1440,13 @@ body::before {
   font-size: 12px;
 }
 
+.final-team-score-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
 .final-match {
   background: linear-gradient(135deg, rgba(247,212,74,0.05), rgba(247,212,74,0.01));
   border-color: rgba(247,212,74,0.15);
