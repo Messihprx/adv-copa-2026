@@ -58,8 +58,10 @@
           <span>🏆</span> Palpite Copa 2026
         </a>
         <div class="header-user">
-          <span class="header-username" id="headerUsername">usuário</span>
-          <div class="header-avatar" id="headerAvatar">U</div>
+          <div class="header-profile-btn" onclick="navigateToProfile()" title="Meu Perfil">
+            <span class="header-username" id="headerUsername">usuário</span>
+            <div class="header-avatar" id="headerAvatar">U</div>
+          </div>
           <button class="btn-logout" onclick="logout()">Sair</button>
         </div>
       </div>
@@ -176,6 +178,10 @@
         <p>Entenda como funciona o jogo de palpites</p>
       </div>
       <div id="infoContainer"></div>
+    </div>
+
+    <div class="page" id="pageProfile">
+      <div id="profileContainer"></div>
     </div>
   </div>
 

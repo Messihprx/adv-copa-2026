@@ -134,6 +134,7 @@ document.querySelectorAll('.nav-item').forEach(item=>{
     if(item.dataset.page==='leaderboard')loadLeaderboard();
     if(item.dataset.page==='history')loadHistory();
     if(item.dataset.page==='info')renderInfo();
+    if(item.dataset.page==='profile')renderProfile();
   });
 });
 
@@ -971,6 +972,95 @@ function renderInfo(){
 </section>
 
 </div>`;
+}
+
+function navigateToProfile(){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('show'));
+  document.getElementById('pageProfile').classList.add('show');
+  renderProfile();
+}
+
+async function renderProfile(){
+  const c=document.getElementById('profileContainer');
+  const [me,score,groups,leaderboard]=await Promise.all([
+    apiCall('/me'),apiCall('/my-score'),apiCall('/groups'),apiCall('/scores')
+  ]);
+  if(!me){c.innerHTML='<div class="empty-state"><span class="icon">⚠️</span><h3>Erro ao carregar</h3></div>';return;}
+
+  const created=new Date(me.created_at||Date.now());
+  const memberSince=created.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+
+  const myRank=leaderboard?leaderboard.findIndex(u=>u.username===me.username)+1:null;
+  const totalUsers=leaderboard?leaderboard.length:0;
+
+  const gpCount=groups?groups.reduce((s,g)=>s+g.teams.length,0):0;
+  const mpCount=score&&score.breakdown?score.breakdown.filter(b=>b.category==='match_prediction').length:0;
+  const groupPts=score&&score.breakdown?score.breakdown.filter(b=>b.category==='group_qualify'||b.category==='group_position').reduce((s,b)=>s+b.points,0):0;
+  const koPts=score&&score.breakdown?score.breakdown.filter(b=>b.category==='knockout'||b.category==='champion'||b.category==='vice'||b.category==='third_place').reduce((s,b)=>s+b.points,0):0;
+  const matchPts=score&&score.breakdown?score.breakdown.filter(b=>b.category==='match_prediction'||b.category==='final_exact'||b.category==='final_winner').reduce((s,b)=>s+b.points,0):0;
+
+  const letter=me.username.charAt(0).toUpperCase();
+  const colors=['#ff6b6b','#feca57','#48dbfb','#ff9ff3','#54a0ff','#5f27cd','#01a3a4','#f368e0','#ff6348','#7bed9f'];
+  const colorIdx=me.username.charCodeAt(0)%colors.length;
+  const avatarBg=colors[colorIdx];
+
+  let h=`
+<div class="profile-page">
+  <div class="profile-header-card">
+    <div class="profile-avatar" style="background:${avatarBg}">${letter}</div>
+    <div class="profile-info">
+      <h1 class="profile-name">${me.username}</h1>
+      <span class="profile-email">${me.email||''}</span>
+      <span class="profile-member">Membro desde ${memberSince}</span>
+    </div>
+    ${myRank?`<div class="profile-rank-badge">#${myRank} de ${totalUsers}</div>`:''}
+  </div>
+
+  <div class="profile-stats-grid">
+    <div class="profile-stat-card"><div class="ps-value" style="color:var(--gold)">${score?score.total:0}</div><div class="ps-label">Pontos Totais</div></div>
+    <div class="profile-stat-card"><div class="ps-value" style="color:var(--green)">${groupPts}</div><div class="ps-label">Grupos</div></div>
+    <div class="profile-stat-card"><div class="ps-value" style="color:var(--blue)">${koPts}</div><div class="ps-label">Mata-Mata</div></div>
+    <div class="profile-stat-card"><div class="ps-value" style="color:var(--primary)">${matchPts}</div><div class="ps-label">Placares</div></div>
+  </div>
+
+  <div class="profile-section">
+    <div class="profile-section-title">📊 Atividade</div>
+    <div class="profile-activity-grid">
+      <div class="profile-activity-item"><span class="pa-value">${Object.keys(groupPredictions||{}).length}</span><span class="pa-label">Grupos com palpite</span></div>
+      <div class="profile-activity-item"><span class="pa-value">${Object.keys(knockoutPredictions||{}).length}</span><span class="pa-label">Palpites no mata-mata</span></div>
+      <div class="profile-activity-item"><span class="pa-value">${matchPredictions?matchPredictions.length:0}</span><span class="pa-label">Palpites de placar</span></div>
+      <div class="profile-activity-item"><span class="pa-value">${mpCount}</span><span class="pa-label">Placares pontuados</span></div>
+    </div>
+  </div>
+
+  <div class="profile-section">
+    <div class="profile-section-title">🏆 Pontuação por Categoria</div>
+    <div class="profile-categories">
+      <div class="profile-cat"><span class="pc-label">Grupos (classificação + posição)</span><div class="pc-bar"><div class="pc-fill pc-fill-gold" style="width:${score&&score.total?Math.round(groupPts/score.total*100):0}%"></div></div><span class="pc-value">${groupPts}</span></div>
+      <div class="profile-cat"><span class="pc-label">Terceiros colocados</span><div class="pc-bar"><div class="pc-fill pc-fill-green" style="width:${score&&score.total?Math.round((score.breakdown||[]).filter(b=>b.category==='third_advance').reduce((s,b)=>s+b.points,0)/score.total*100):0}%"></div></div><span class="pc-value">${(score.breakdown||[]).filter(b=>b.category==='third_advance').reduce((s,b)=>s+b.points,0)}</span></div>
+      <div class="profile-cat"><span class="pc-label">Mata-mata (avanços)</span><div class="pc-bar"><div class="pc-fill pc-fill-blue" style="width:${score&&score.total?Math.round(koPts/score.total*100):0}%"></div></div><span class="pc-value">${koPts}</span></div>
+      <div class="profile-cat"><span class="pc-label">Placares (5/10pts)</span><div class="pc-bar"><div class="pc-fill pc-fill-primary" style="width:${score&&score.total?Math.round(matchPts/score.total*100):0}%"></div></div><span class="pc-value">${matchPts}</span></div>
+    </div>
+  </div>
+
+  <div class="profile-section">
+    <div class="profile-section-title">📋 Últimos Pontos</div>
+    <div class="profile-recent">`;
+  if(score&&score.breakdown&&score.breakdown.length){
+    const recent=score.breakdown.slice(-5).reverse();
+    for(const b of recent){
+      const icons={'group_qualify':'📋','group_position':'🎯','third_advance':'🔝','knockout':'🏆','third_place':'🥉','champion':'👑','vice':'🥈','final_winner':'⚽','final_exact':'🎯','match_prediction':'📊'};
+      h+=`<div class="profile-recent-item"><span class="pri-icon">${icons[b.category]||'•'}</span><span class="pri-text">${b.reason}</span><span class="pri-pts">+${b.points}</span></div>`;
+    }
+  }else{
+    h+=`<div class="profile-recent-empty">Nenhum ponto ainda. Faça seus palpites!</div>`;
+  }
+  h+=`
+    </div>
+  </div>
+</div>`;
+  c.innerHTML=h;
 }
 
 if(token){
