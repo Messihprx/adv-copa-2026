@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Palpite Copa 2026</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+
+  <div class="auth-container" id="authContainer">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <span class="trophy">🏆</span>
+        <h1>Palpite Copa 2026</h1>
+        <p>Faça suas apostas para o Mundial</p>
+      </div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="login">Entrar</button>
+        <button class="auth-tab" data-tab="register">Cadastrar</button>
+      </div>
+      <div class="auth-error" id="authError"></div>
+      <form class="auth-form active" id="loginForm">
+        <div class="form-group">
+          <label>Usuário</label>
+          <input type="text" id="loginUsername" placeholder="Seu usuário" required>
+        </div>
+        <div class="form-group">
+          <label>Senha</label>
+          <input type="password" id="loginPassword" placeholder="Sua senha" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Entrar</button>
+      </form>
+      <form class="auth-form" id="registerForm">
+        <div class="form-group">
+          <label>Usuário</label>
+          <input type="text" id="regUsername" placeholder="Escolha um usuário" required>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="regEmail" placeholder="seu@email.com" required>
+        </div>
+        <div class="form-group">
+          <label>Senha</label>
+          <input type="password" id="regPassword" placeholder="Crie uma senha" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Criar Conta</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="app-container" id="appContainer">
+    <header class="app-header">
+      <div class="header-inner">
+        <a href="#" class="header-brand">
+          <span>🏆</span> Palpite Copa 2026
+        </a>
+        <div class="header-user">
+          <span class="header-username" id="headerUsername">usuário</span>
+          <div class="header-avatar" id="headerAvatar">U</div>
+          <button class="btn-logout" onclick="logout()">Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <nav class="main-nav">
+      <div class="nav-inner">
+        <button class="nav-item active" data-page="home">🔴 Ao Vivo</button>
+        <button class="nav-item" data-page="results">📊 Resultados</button>
+        <button class="nav-item" data-page="groups">📋 Grupos</button>
+        <button class="nav-item" data-page="knockout">🏆 Mata-Mata</button>
+        <button class="nav-item" data-page="leaderboard">📊 Ranking</button>
+        <button class="nav-item" data-page="history">📜 Histórico</button>
+        <button class="nav-item" data-page="info">ℹ️ Info</button>
+      </div>
+    </nav>
+
+    <div class="page show" id="pageHome">
+      <div class="page-header">
+        <h2>🔴 Jogos ao Vivo</h2>
+        <p>Acompanhe os jogos da Copa do Mundo 2026 em tempo real</p>
+      </div>
+      <div id="liveContainer">
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="pageResults">
+      <div class="page-header">
+        <h2>📊 Resultados Reais</h2>
+        <p>Placares atualizados em tempo real de todos os jogos da Copa</p>
+      </div>
+      <div id="resultsContainer">
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="pageGroups">
+      <div class="page-header">
+        <h2>📋 Palpites da Fase de Grupos</h2>
+        <p>Selecione quem passa em <span class="highlight">1º</span>, <span class="highlight">2º </span> e <span
+            class="highlight">3º</span> lugar em
+          cada grupo</p>
+      </div>
+      <div class="progress-bar">
+        <span>✅</span>
+        <div class="progress-track">
+          <div class="progress-fill" id="groupsProgress" style="width:0%"></div>
+        </div>
+        <span class="progress-text"><span class="count" id="groupsCount">0</span>/12 grupos</span>
+      </div>
+      <div id="groupsContainer">
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+        </div>
+      </div>
+      <div class="save-bar">
+        <button class="btn btn-primary" onclick="saveGroupPredictions()">💾 Salvar Palpites</button>
+        <button class="btn btn-danger" onclick="showClearModal()" style="margin-left:8px;">🗑️ Limpar Palpites</button>
+      </div>
+    </div>
+
+    <div class="page" id="pageKnockout">
+      <div class="page-header">
+        <h2>🏆 Chaveamento do Mata-Mata</h2>
+        <p>Clique no time vencedor de cada jogo. Times dos grupos são preenchidos automaticamente.</p>
+      </div>
+      <div id="knockoutContainer">
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+        </div>
+      </div>
+      <div class="save-bar">
+        <button class="btn btn-primary" onclick="saveKnockoutPredictions()">💾 Salvar Palpites</button>
+      </div>
+    </div>
+
+    <div class="page" id="pageLeaderboard">
+      <div class="page-header">
+        <h2>📊 Ranking dos Palpiteiros</h2>
+        <p>Veja a pontuação de todos com base nos resultados reais</p>
+      </div>
+      <div class="score-tabs" style="display:flex;gap:8px;margin-bottom:16px;">
+        <button class="btn btn-sm btn-primary" onclick="loadScores()" id="btnScores">🏆 Ver Pontuação</button>
+        <button class="btn btn-sm btn-secondary" onclick="loadLeaderboard()" id="btnLeaderboard">📋 Ver
+          Palpites</button>
+      </div>
+      <div id="leaderboardContainer">
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="pageHistory">
+      <div class="page-header">
+        <h2>📜 Histórico de Jogos</h2>
+        <p>Jogos encerrados com seus palpites e pontuação</p>
+      </div>
+      <div id="historyContainer">
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="pageInfo">
+      <div class="page-header">
+        <h2>ℹ️ Sobre o Palpite Copa 2026</h2>
+        <p>Entenda como funciona o jogo de palpites</p>
+      </div>
+      <div id="infoContainer"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="clearModal" onclick="if(event.target===this)hideClearModal()">
+    <div class="modal-content">
+      <h3>🗑️ Limpar Palpites</h3>
+      <p>Tem certeza que deseja apagar todos os seus palpites dos grupos? Esta ação não poderá ser desfeita.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="hideClearModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="confirmClearPredictions()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="matchModal" onclick="if(event.target===this)hideMatchModal()">
+    <div class="modal-content match-modal">
+      <h3 id="matchModalTitle">⚽ Palpite do Jogo</h3>
+      <div class="match-modal-teams" id="matchModalTeams"></div>
+      <div class="match-modal-scores">
+        <div class="match-modal-score">
+          <span id="matchModalHomeName">Casa</span>
+          <input type="number" min="0" max="20" class="si si-lg" id="matchModalHomeScore" placeholder="0">
+        </div>
+        <span class="svs-lg">VS</span>
+        <div class="match-modal-score">
+          <span id="matchModalAwayName">Visitante</span>
+          <input type="number" min="0" max="20" class="si si-lg" id="matchModalAwayScore" placeholder="0">
+        </div>
+      </div>
+      <div class="match-modal-timer" id="matchModalTimer"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="hideMatchModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveMatchPrediction()">💾 Salvar Palpite</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="save-toast" id="saveToast">✅ Salvo!</div>
+  <script src="/js/app.js"></script>
+</body>
+
+</html>
