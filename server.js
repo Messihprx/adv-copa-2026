@@ -59,13 +59,16 @@ app.post('/api/register', async (req, res) => {
   const { username, email, password } = req.body;
   if (!username || !email || !password) return res.status(400).json({ error: 'Preencha todos os campos' });
   const hash = bcrypt.hashSync(password, 10);
-  const { data, error } = await supabase.from('users').insert({ username, email, password_hash: hash }).select().single();
-  if (error) {
-    if (error.code === '23505') return res.status(400).json({ error: 'Usuário ou email já cadastrado' });
+  const { error: insErr } = await supabase.from('users').insert({ username, email, password_hash: hash });
+  if (insErr) {
+    if (insErr.code === '23505') return res.status(400).json({ error: 'Usuário ou email já cadastrado' });
     return res.status(500).json({ error: 'Erro ao registrar' });
   }
-  const token = jwt.sign({ id: data.id, username: data.username }, JWT_SECRET, { expiresIn: '30d' });
-  res.json({ token, user: { id: data.id, username: data.username, email: data.email } });
+  const { data: users } = await supabase.from('users').select('id, username, email').eq('username', username).limit(1);
+  if (!users || !users.length) return res.status(500).json({ error: 'Erro ao registrar' });
+  const user = users[0];
+  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
+  res.json({ token, user: { id: user.id, username: user.username, email: user.email } });
 });
 
 app.post('/api/login', async (req, res) => {
