@@ -355,8 +355,21 @@ async function calculateUserFullScore(userId, matches) {
   const userGroupMap = {};
   if (gp) for (const p of gp) userGroupMap[p.group_id] = p;
 
+  const groupTotal = {};
+  const groupFinished = {};
+  for (const m of allMatches) {
+    if (m.type !== 'group') continue;
+    groupTotal[m.group] = (groupTotal[m.group] || 0) + 1;
+    if (m.finished === 'TRUE') groupFinished[m.group] = (groupFinished[m.group] || 0) + 1;
+  }
+  const completedGroups = new Set();
+  for (const g of Object.keys(groupTotal)) {
+    if (groupTotal[g] === (groupFinished[g] || 0)) completedGroups.add(g);
+  }
+
   for (const [g, teams] of Object.entries(standings)) {
-    if (teams.length < 2) continue;
+    if (!completedGroups.has(g)) continue;
+    if (teams.length < 4) continue;
     const actualFirst = teams[0].id;
     const actualSecond = teams[1].id;
     const pred = userGroupMap[g];
@@ -390,7 +403,8 @@ async function calculateUserFullScore(userId, matches) {
   }
 
   // --- THIRD PLACE ADVANCING ---
-  if (ta && advancingThirdIds.size === 8) {
+  const allGroupsComplete = Object.keys(groupTotal).length === 12 && completedGroups.size === 12;
+  if (allGroupsComplete && ta && advancingThirdIds.size === 8) {
     const userThirdIds = new Set(ta.map(t => t.team_id));
     for (const tid of userThirdIds) {
       if (advancingThirdIds.has(tid)) {
