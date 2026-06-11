@@ -146,10 +146,10 @@
         <h2>📊 Ranking dos Palpiteiros</h2>
         <p>Veja a pontuação de todos com base nos resultados reais</p>
       </div>
-      <div class="score-tabs" style="display:flex;gap:8px;margin-bottom:16px;">
+      <div class="score-tabs" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
         <button class="btn btn-sm btn-primary" onclick="loadScores()" id="btnScores">🏆 Ver Pontuação</button>
-        <button class="btn btn-sm btn-secondary" onclick="loadLeaderboard()" id="btnLeaderboard">📋 Ver
-          Palpites</button>
+        <button class="btn btn-sm btn-secondary" onclick="loadLeaderboard()" id="btnLeaderboard">📋 Ver Palpites</button>
+        <button class="btn btn-sm btn-info" onclick="loadMyScore()" id="btnMyScore">🔍 Minha Pontuação</button>
       </div>
       <div id="leaderboardContainer">
         <div class="loading-spinner">

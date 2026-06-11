@@ -1820,3 +1820,20 @@ body::before {
 .highlight-gold { color: var(--gold); }
 .highlight-green { color: var(--green); }
 .highlight-blue { color: var(--blue); }
+
+/* ========== MY SCORE ========== */
+.my-score-page { max-width: 600px; margin: 0 auto; }
+.my-score-total { text-align: center; padding: 32px; background: linear-gradient(135deg,rgba(247,212,74,0.1),rgba(247,212,74,0.05)); border: 2px solid var(--gold); border-radius: var(--radius); margin-bottom: 20px; }
+.ms-label { display: block; font-size: 14px; color: var(--text-muted); margin-bottom: 8px; }
+.ms-value { display: block; font-size: 48px; font-weight: 900; color: var(--gold); line-height: 1; }
+.score-breakdown { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.score-bd-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 16px; }
+.score-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg-input); border-radius: var(--radius-sm); margin-bottom: 6px; }
+.score-icon { font-size: 18px; flex-shrink: 0; }
+.score-reason { flex: 1; font-size: 13px; color: var(--text-secondary); line-height: 1.4; }
+.score-pts { font-size: 14px; font-weight: 800; white-space: nowrap; }
+.pts-low { color: var(--green); }
+.pts-mid { color: var(--gold); }
+.pts-high { color: #ff6b6b; font-size: 16px; }
+.btn-info { background: var(--primary); color: #fff; border: none; padding: 6px 14px; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-weight: 600; transition: var(--transition); }
+.btn-info:hover { opacity: 0.85; }

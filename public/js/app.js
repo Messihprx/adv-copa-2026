@@ -793,7 +793,7 @@ async function loadLeaderboard(){
   let h='<table class="leaderboard-table"><thead><tr><th>#</th><th>Palpiteiro</th><th>Grupos</th><th>Mata-Mata</th><th>Total</th></tr></thead><tbody>';
   for(const u of d){
     const rk=u.rank<=3?`<span class="rank-medal">${medals[u.rank-1]}</span>`:`<span class="rank-number">${u.rank}</span>`;
-    h+=`<tr><td>${rk}</td><td><strong>${u.username}</strong></td><td>${u.groupPredictions}/12</td><td>${u.knockoutPredictions}</td><td><strong>${u.total}</strong></td></tr>`;
+    h+=`<tr><td>${rk}</td><td><strong>${u.username}</strong></td><td>${u.groupPredictions}/12</td><td>${u.knockoutPredictions}</td><td><strong>${u.totalScore}</strong></td></tr>`;
   }
   h+='</tbody></table>';c.innerHTML=h;
 }
@@ -803,12 +803,32 @@ async function loadScores(){
   const d=await apiCall('/scores');
   if(!d||!d.length){c.innerHTML='<div class="empty-state"><span class="icon">\uD83C\uDFC6</span><h3>Sem pontua\u00e7\u00e3o ainda</h3><p>Os resultados aparecer\u00e3o quando os jogos come\u00e7arem!</p></div>';return;}
   const medals=['\uD83E\uDD47','\uD83E\uDD48','\uD83E\uDD49'];
-  let h='<table class="leaderboard-table"><thead><tr><th>#</th><th>Palpiteiro</th><th>Pontos</th></tr></thead><tbody>';
+  let h='<table class="leaderboard-table"><thead><tr><th>#</th><th>Palpiteiro</th><th>Grupos</th><th>Mata-Mata</th><th>Pontos</th></tr></thead><tbody>';
   for(const u of d){
     const rk=u.rank<=3?`<span class="rank-medal">${medals[u.rank-1]}</span>`:`<span class="rank-number">${u.rank}</span>`;
-    h+=`<tr><td>${rk}</td><td><strong>${u.username}</strong></td><td style="color:var(--gold);font-weight:700;font-size:18px;">${u.score}</td></tr>`;
+    h+=`<tr><td>${rk}</td><td><strong>${u.username}</strong></td><td>${u.groupPredictions}/12</td><td>${u.knockoutPredictions}</td><td style="color:var(--gold);font-weight:700;font-size:18px;">${u.totalScore}</td></tr>`;
   }
   h+='</tbody></table>';c.innerHTML=h;
+}
+
+async function loadMyScore(){
+  const c=document.getElementById('leaderboardContainer');
+  const d=await apiCall('/my-score');
+  if(!d){c.innerHTML='<div class="empty-state"><span class="icon">\uD83D\uDCCA</span><h3>Erro ao carregar</h3></div>';return;}
+  let h='<div class="my-score-page">';
+  h+=`<div class="my-score-total"><span class="ms-label">Minha Pontua\u00e7\u00e3o Total</span><span class="ms-value">${d.total}</span></div>`;
+  if(d.breakdown&&d.breakdown.length){
+    h+='<div class="score-breakdown"><div class="score-bd-title">\uD83D\uDCCA Detalhamento</div>';
+    const icons={'group_qualify':'📋','group_position':'🎯','third_advance':'🔝','knockout':'🏆','third_place':'🥉','champion':'👑','vice':'🥈','final_winner':'⚽','final_exact':'🎯','match_prediction':'📊'};
+    for(const b of d.breakdown){
+      const icon=icons[b.category]||'•';
+      h+=`<div class="score-item"><span class="score-icon">${icon}</span><span class="score-reason">${b.reason}</span><span class="score-pts ${b.points>=50?'pts-high':(b.points>=20?'pts-mid':'pts-low')}">+${b.points}</span></div>`;
+    }
+    h+='</div>';
+  }else{
+    h+='<div class="empty-state"><span class="icon">\uD83D\uDCC5</span><h3>Nenhum ponto ainda</h3><p>Seus pontos aparecer\u00e3o aqui quando os jogos terminarem!</p></div>';
+  }
+  h+='</div>';c.innerHTML=h;
 }
 
 function renderInfo(){
@@ -817,33 +837,67 @@ function renderInfo(){
 
 <section class="info-card">
   <div class="info-icon">🎯</div>
-  <h3>O que é?</h3>
-  <p>O <strong>Palpite Copa 2026</strong> é um jogo interativo onde você <strong>prevê os resultados</strong> de todos os jogos da Copa do Mundo 2026. Você ganha pontos conforme seus palpites acertam os resultados reais.</p>
+  <h3>O que \u00e9?</h3>
+  <p>O <strong>Palpite Copa 2026</strong> \u00e9 um jogo interativo onde voc\u00ea <strong>prev\u00ea os resultados</strong> de todos os jogos da Copa do Mundo 2026. Voc\u00ea ganha pontos conforme seus palpites acertam os resultados reais.</p>
 </section>
 
 <section class="info-card">
   <div class="info-icon">📋</div>
   <h3>Fase de Grupos</h3>
-  <p>Nos 12 grupos (A a L), cada um com 4 seleções, você deve indicar quem fica em <strong>1º</strong>, <strong>2º</strong> e <strong>3º</strong> lugar. Clique no time uma vez para 1º, duas para 2º, três para 3º, quatro para limpar.</p>
-  <p>Após escolher os 12 terceiros lugares, você seleciona <strong>8 deles</strong> para avançar ao mata-mata — exatamente como no regulamento real da Copa de 2026.</p>
+  <p>Nos 12 grupos (A a L), cada um com 4 sele\u00e7\u00f5es, voc\u00ea deve indicar quem fica em <strong>1\u00ba</strong>, <strong>2\u00ba</strong> e <strong>3\u00ba</strong> lugar. Clique no time uma vez para 1\u00ba, duas para 2\u00ba, tr\u00eas para 3\u00ba, quatro para limpar.</p>
+  <p>Ap\u00f3s escolher os 12 terceiros lugares, voc\u00ea seleciona <strong>8 deles</strong> para avan\u00e7ar ao mata-mata — exatamente como no regulamento real da Copa de 2026.</p>
 </section>
 
 <section class="info-card">
   <div class="info-icon">🏆</div>
   <h3>Mata-Mata</h3>
-  <p>O chaveamento é <strong>preenchido automaticamente</strong> com base nos seus palpites dos grupos (1º, 2º e 3º lugares). Você só precisa clicar no vencedor de cada partida.</p>
-  <p>O bracket segue o formato oficial: 32 times → Oitavas → Quartas → Semifinais → Final (e disputa de 3º lugar).</p>
+  <p>O chaveamento \u00e9 <strong>preenchido automaticamente</strong> com base nos seus palpites dos grupos (1\u00ba, 2\u00ba e 3\u00ba lugares). Voc\u00ea s\u00f3 precisa clicar no vencedor de cada partida.</p>
+  <p>O bracket segue o formato oficial: 32 times → Oitavas → Quartas → Semifinais → Final (e disputa de 3\u00ba lugar).</p>
 </section>
 
 <section class="info-card">
   <div class="info-icon">⚽</div>
   <h3>Palpites de Placar</h3>
-  <p>Em cada jogo da aba <strong>Ao Vivo</strong>, você pode clicar em <strong>"Adivinhar"</strong> e dar um palpite do placar exato. O prazo limite é <strong>1 minuto antes</strong> do início da partida — após isso, o palpite é bloqueado.</p>
+  <p>Em cada jogo da aba <strong>Ao Vivo</strong>, voc\u00ea pode clicar em <strong>"Adivinhar"</strong> e dar um palpite do placar exato. O prazo limite \u00e9 <strong>1 minuto antes</strong> do in\u00edcio da partida — ap\u00f3s isso, o palpite \u00e9 bloqueado.</p>
 </section>
 
 <section class="info-card">
   <div class="info-icon">📊</div>
-  <h3>Sistema de Pontuação</h3>
+  <h3>Sistema de Pontua\u00e7\u00e3o</h3>
+
+  <h4 style="margin-top:16px;color:var(--gold);">Fase de Grupos</h4>
+  <div class="scoring-table">
+    <div class="scoring-row"><span class="scoring-label">Acertar classifica\u00e7\u00e3o (top 2)</span><span class="scoring-pts highlight-gold">10 pts cada time</span></div>
+    <div class="scoring-row"><span class="scoring-label">Acertar posi\u00e7\u00e3o exata (1\u00ba ou 2\u00ba)</span><span class="scoring-pts highlight-green">+15 pts cada</span></div>
+  </div>
+  <p>M\u00e1ximo por grupo: <strong>50 pts</strong> (2 times × 10 classifica\u00e7\u00e3o + 15 posi\u00e7\u00e3o = 25 cada)</p>
+  <p><strong>Exemplo:</strong> Usu\u00e1rio previu 1\u00ba Brasil, 2\u00ba Marrocos → resultado exato → Brasil 25 + Marrocos 25 = <strong>50 pts</strong></p>
+
+  <h4 style="margin-top:16px;color:var(--gold);">Terceiros Colocados</h4>
+  <div class="scoring-table">
+    <div class="scoring-row"><span class="scoring-label">Acertar terceiro entre os 8 melhores</span><span class="scoring-pts highlight-gold">10 pts cada</span></div>
+  </div>
+  <p>M\u00e1ximo: <strong>80 pts</strong> (8 terceiros × 10)</p>
+
+  <h4 style="margin-top:16px;color:var(--gold);">Mata-Mata</h4>
+  <div class="scoring-table">
+    <div class="scoring-row"><span class="scoring-label">Acertar classificado na Rodada de 32</span><span class="scoring-pts highlight-gold">20 pts</span></div>
+    <div class="scoring-row"><span class="scoring-label">Acertar classificado nas Oitavas</span><span class="scoring-pts highlight-gold">20 pts</span></div>
+    <div class="scoring-row"><span class="scoring-label">Acertar classificado nas Quartas</span><span class="scoring-pts highlight-gold">30 pts</span></div>
+    <div class="scoring-row"><span class="scoring-label">Acertar classificado nas Semifinais</span><span class="scoring-pts highlight-gold">50 pts</span></div>
+    <div class="scoring-row"><span class="scoring-label">Vencedor da disputa de 3\u00ba lugar</span><span class="scoring-pts">30 pts</span></div>
+  </div>
+
+  <h4 style="margin-top:16px;color:var(--gold);">Final</h4>
+  <div class="scoring-table">
+    <div class="scoring-row"><span class="scoring-label">Acertar o campe\u00e3o</span><span class="scoring-pts highlight-gold">100 pts</span></div>
+    <div class="scoring-row"><span class="scoring-label">Acertar o vice-campe\u00e3o</span><span class="scoring-pts highlight-green">50 pts</span></div>
+    <div class="scoring-row"><span class="scoring-label">Acertar vencedor da final</span><span class="scoring-pts">50 pts</span></div>
+    <div class="scoring-row"><span class="scoring-label">Acertar placar exato da final</span><span class="scoring-pts highlight-gold">200 pts</span></div>
+  </div>
+  <p>M\u00e1ximo na final: <strong>350 pts</strong> (campe\u00e3o 100 + vice 50 + vencedor 50 + placar 200)</p>
+
+  <h4 style="margin-top:16px;color:var(--gold);">Palpites de Placar (jogos comuns)</h4>
   <div class="scoring-table">
     <div class="scoring-row"><span class="scoring-label">Placar exato</span><span class="scoring-pts highlight-gold">10 pontos</span></div>
     <div class="scoring-row"><span class="scoring-label">Vencedor/empate certo (placar errado)</span><span class="scoring-pts highlight-green">5 pontos</span></div>
@@ -851,71 +905,69 @@ function renderInfo(){
   </div>
   <p><strong>Exemplos:</strong></p>
   <ul class="info-list">
-    <li>Jogo termina <strong>2×1</strong> e você palpitou <strong>2×1</strong> → <span class="highlight-gold">10 pts</span> (exato)</li>
-    <li>Jogo termina <strong>2×1</strong> e você palpitou <strong>3×0</strong> → <span class="highlight-green">5 pts</span> (vencedor certo)</li>
-    <li>Jogo termina <strong>2×1</strong> e você palpitou <strong>0×2</strong> → <span class="">0 pts</span> (errou)</li>
-    <li>Empate <strong>1×1</strong> e você palpitou <strong>0×0</strong> → <span class="highlight-green">5 pts</span> (empate certo)</li>
+    <li>Jogo termina <strong>2×1</strong> e voc\u00ea palpitou <strong>2×1</strong> → <span class="highlight-gold">10 pts</span> (exato)</li>
+    <li>Jogo termina <strong>2×1</strong> e voc\u00ea palpitou <strong>3×0</strong> → <span class="highlight-green">5 pts</span> (vencedor certo)</li>
+    <li>Jogo termina <strong>2×1</strong> e voc\u00ea palpitou <strong>0×2</strong> → 0 pts (errou)</li>
+    <li>Empate <strong>1×1</strong> e voc\u00ea palpitou <strong>0×0</strong> → <span class="highlight-green">5 pts</span> (empate certo)</li>
   </ul>
 </section>
 
 <section class="info-card">
   <div class="info-icon">🔴</div>
   <h3>Ao Vivo</h3>
-  <p>A aba <strong>Ao Vivo</strong> mostra todos os jogos do dia com atualização automática a cada 45 segundos. Os jogos são divididos em:</p>
+  <p>A aba <strong>Ao Vivo</strong> mostra todos os jogos do dia com atualiza\u00e7\u00e3o autom\u00e1tica. Os jogos s\u00e3o divididos em:</p>
   <ul class="info-list">
     <li><strong>Ao Vivo</strong> — partidas em andamento com placar e tempo decorrido</li>
-    <li><strong>Hoje</strong> — jogos do dia que ainda não começaram</li>
-    <li><strong>Próximos</strong> — jogos futuros</li>
+    <li><strong>Hoje</strong> — jogos do dia que ainda n\u00e3o come\u00e7aram</li>
+    <li><strong>Pr\u00f3ximos</strong> — jogos futuros</li>
   </ul>
-  <p>Jogos ao vivo têm fundo vermelho pulsante. Clique em <strong>"Adivinhar"</strong> para dar seu palpite (disponível até 1 minuto antes do início).</p>
+  <p>Jogos ao vivo t\u00eam fundo vermelho pulsante. Clique em <strong>"Adivinhar"</strong> para dar seu palpite (dispon\u00edvel at\u00e9 1 minuto antes do in\u00edcio).</p>
 </section>
 
 <section class="info-card">
   <div class="info-icon">📊</div>
-  <h3>Aba Resultados</h3>
-  <p>A aba <strong>Resultados</strong> mostra a <strong>classificação real</strong> dos grupos calculada automaticamente a partir dos placares oficiais da API <a href="https://worldcup26.ir" target="_blank">worldcup26.ir</a>.</p>
-  <p>As estatísticas exibidas são:</p>
-  <ul class="info-list">
-    <li><strong>P</strong> — Pontos (3 vitória, 1 empate, 0 derrota)</li>
-    <li><strong>J</strong> — Jogos disputados</li>
-    <li><strong>V</strong> — Vitórias</li>
-    <li><strong>E</strong> — Empates</li>
-    <li><strong>D</strong> — Derrotas</li>
-    <li><strong>GP</strong> — Gols Pró</li>
-    <li><strong>SG</strong> — Saldo de Gols</li>
-  </ul>
-  <p>Os times em <span class="highlight-gold">1º</span>, <span class="highlight-green">2º</span> e <span class="highlight-blue">3º</span> são destacados com bordas coloridas.</p>
-  <p>Abaixo dos grupos, o <strong>chaveamento real</strong> mostra o bracket completo com os times classificados e placares das partidas já realizadas.</p>
+  <h3>Resultados</h3>
+  <p>A aba <strong>Resultados</strong> mostra a <strong>classifica\u00e7\u00e3o real</strong> dos grupos calculada automaticamente a partir dos placares oficiais da API <a href="https://worldcup26.ir" target="_blank">worldcup26.ir</a>.</p>
+  <p>Estat\u00edsticas: <strong>P</strong> (pontos), <strong>J</strong>, <strong>V</strong>, <strong>E</strong>, <strong>D</strong>, <strong>GP</strong>, <strong>SG</strong>.</p>
+  <p>Abaixo dos grupos, o <strong>chaveamento real</strong> mostra o bracket completo com os times e placares.</p>
 </section>
 
 <section class="info-card">
   <div class="info-icon">📜</div>
-  <h3>Histórico de Jogos</h3>
-  <p>A aba <strong>Histórico</strong> lista todos os jogos já encerrados com:</p>
+  <h3>Hist\u00f3rico e Minha Pontua\u00e7\u00e3o</h3>
+  <p>Na aba <strong>Ranking</strong>, clique em <strong>"Minha Pontua\u00e7\u00e3o"</strong> para ver o detalhamento completo de todos os seus pontos, com data, evento, pontos ganhos e motivo.</p>
+  <p><strong>Exemplo de detalhamento:</strong></p>
   <ul class="info-list">
-    <li>Placar real do jogo</li>
-    <li>Seu palpite (se você previu)</li>
-    <li>Pontos ganhos naquela partida</li>
+    <li>+25 — Brasil classificado e 1\u00ba no Grupo C</li>
+    <li>+10 — Marrocos classificado no Grupo C</li>
+    <li>+30 — Brasil avan\u00e7ou nas Quartas</li>
+    <li>+100 — Brasil campe\u00e3o!</li>
   </ul>
+  <p>A aba <strong>Hist\u00f3rico</strong> lista todos os jogos encerrados com seu palpite e pontua\u00e7\u00e3o.</p>
 </section>
 
 <section class="info-card">
   <div class="info-icon">📊</div>
   <h3>Ranking</h3>
-  <p>A aba <strong>Ranking</strong> exibe a pontuação total de todos os participantes, ordenada do maior para o menor. A pontuação considera todos os palpites de grupos, mata-mata e placares.</p>
+  <p>A aba <strong>Ranking</strong> exibe a pontua\u00e7\u00e3o total de todos os participantes, com duas visualiza\u00e7\u00f5es:</p>
+  <ul class="info-list">
+    <li><strong>Ver Pontua\u00e7\u00e3o</strong> — ranking por pontos totais</li>
+    <li><strong>Ver Palpites</strong> — quem fez mais palpites</li>
+  </ul>
+  <p>Toda pontua\u00e7\u00e3o \u00e9 <strong>calculada automaticamente</strong> conforme os jogos terminam, sem necessidade de interven\u00e7\u00e3o manual.</p>
 </section>
 
 <section class="info-card">
   <div class="info-icon">🗑️</div>
   <h3>Limpar Palpites</h3>
-  <p>Você pode apagar todos os seus palpites de grupos clicando em <strong>"Limpar Palpites"</strong> na aba Grupos. Um modal de confirmação evita exclusões acidentais.</p>
+  <p>Voc\u00ea pode apagar todos os seus palpites de grupos clicando em <strong>"Limpar Palpites"</strong> na aba Grupos.</p>
 </section>
 
 <section class="info-card">
   <div class="info-icon">🌐</div>
   <h3>Dados e API</h3>
-  <p>Todos os resultados e jogos vêm da API pública <a href="https://worldcup26.ir" target="_blank">worldcup26.ir</a>, que fornece dados oficiais da Copa do Mundo 2026 em tempo real.</p>
-  <p>As bandeiras das seleções são carregadas do <a href="https://flagcdn.com" target="_blank">flagcdn.com</a>.</p>
+  <p>Todos os resultados e jogos v\u00eam da API p\u00fablica <a href="https://worldcup26.ir" target="_blank">worldcup26.ir</a>, que fornece dados oficiais da Copa do Mundo 2026 em tempo real.</p>
+  <p>As bandeiras das sele\u00e7\u00f5es s\u00e3o carregadas do <a href="https://flagcdn.com" target="_blank">flagcdn.com</a>.</p>
 </section>
 
 </div>`;
