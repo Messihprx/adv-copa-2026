@@ -11,6 +11,22 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'copa2026-super-secret-key';
 const WC_API = 'https://worldcup26.ir';
 
+const STADIUM_TZ = {
+  '1': -6, '2': -6, '3': -6, '4': -5, '5': -5, '6': -5,
+  '7': -4, '8': -4, '9': -4, '10': -4, '11': -4, '12': -4,
+  '13': -7, '14': -7, '15': -7, '16': -7
+};
+
+function parseMatchUTC(localDate, stadiumId) {
+  if (!localDate) return null;
+  const parts = localDate.split(' ');
+  if (parts.length < 2) return null;
+  const [mo, da, ye] = parts[0].split('/');
+  const [hh, mi] = parts[1].split(':');
+  const stdTz = STADIUM_TZ[String(stadiumId)] || -5;
+  return Date.UTC(parseInt(ye), parseInt(mo) - 1, parseInt(da), parseInt(hh) - stdTz, parseInt(mi));
+}
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_ANON_KEY
@@ -98,34 +114,27 @@ app.get('/api/groups', async (req, res) => {
 
 app.get('/api/live-matches', async (req, res) => {
   const matches = await fetchMatches();
-  const now = new Date();
+  const now = Date.now();
+  const brOffsetMs = 3 * 3600000;
+  const brNow = new Date(now - brOffsetMs);
+  const brMidnight = Date.UTC(brNow.getUTCFullYear(), brNow.getUTCMonth(), brNow.getUTCDate()) + brOffsetMs;
+  const brNextMidnight = brMidnight + 86400000;
 
   const live = matches.filter(m => m.time_elapsed && m.time_elapsed !== 'notstarted' && m.finished !== 'TRUE');
   const today = matches.filter(m => {
     if (!m.local_date) return false;
-    const parts = m.local_date.split(' ');
-    if (parts.length < 2) return false;
-    const [m1, d1, y1] = parts[0].split('/');
-    const d = new Date(`${y1}-${m1}-${d1}T${parts[1]}`);
-    return d.toDateString() === now.toDateString() && m.time_elapsed === 'notstarted';
+    const matchUtc = parseMatchUTC(m.local_date, m.stadium_id);
+    return matchUtc !== null && matchUtc >= brMidnight && matchUtc < brNextMidnight && m.time_elapsed === 'notstarted';
   });
   const upcoming = matches.filter(m => {
     if (m.time_elapsed !== 'notstarted' || m.finished === 'TRUE') return false;
-    if (m.local_date) {
-      const parts = m.local_date.split(' ');
-      if (parts.length >= 2) {
-        const [m1, d1, y1] = parts[0].split('/');
-        const d = new Date(`${y1}-${m1}-${d1}T${parts[1]}`);
-        if (d.toDateString() === now.toDateString()) return false;
-      }
-    }
+    const matchUtc = m.local_date ? parseMatchUTC(m.local_date, m.stadium_id) : null;
+    if (matchUtc !== null && matchUtc >= brMidnight && matchUtc < brNextMidnight) return false;
     return true;
   }).sort((a, b) => {
-    if (!a.local_date || !b.local_date) return 0;
-    const pa = a.local_date.split(' '), pb = b.local_date.split(' ');
-    if (pa.length < 2 || pb.length < 2) return 0;
-    const [ma,da,ya] = pa[0].split('/'), [mb,db,yb] = pb[0].split('/');
-    return new Date(`${ya}-${ma}-${da}T${pa[1]}`) - new Date(`${yb}-${mb}-${db}T${pb[1]}`);
+    const au = a.local_date ? parseMatchUTC(a.local_date, a.stadium_id) : 0;
+    const bu = b.local_date ? parseMatchUTC(b.local_date, b.stadium_id) : 0;
+    return au - bu;
   }).slice(0, 8);
 
   let userPreds = [];
@@ -137,7 +146,7 @@ app.get('/api/live-matches', async (req, res) => {
       const { data } = await supabase.from('match_predictions').select('*').eq('user_id', decoded.id);
       if (data) userPreds = data;
     }
-  } catch {}
+  } catch { }
 
   res.json({ live, today, upcoming, all: matches, userPredictions: userPreds });
 });
@@ -163,11 +172,15 @@ app.post('/api/predictions/groups', authMiddleware, async (req, res) => {
   const { predictions } = req.body;
   if (!predictions || !Array.isArray(predictions)) return res.status(400).json({ error: 'Dados inválidos' });
 
-  const locked = new Set();
+  const startedCount = {};
   for (const m of matches) {
     if (m.time_elapsed && m.time_elapsed !== 'notstarted' && m.type === 'group') {
-      locked.add(m.group);
+      startedCount[m.group] = (startedCount[m.group] || 0) + 1;
     }
+  }
+  const locked = new Set();
+  for (const [group, count] of Object.entries(startedCount)) {
+    if (count >= 2) locked.add(group);
   }
 
   for (const p of predictions) {
@@ -283,7 +296,7 @@ function getActualGroupStandings(matches) {
     const g = m.group;
     if (!groups[g]) groups[g] = {};
     const hid = parseInt(m.home_team_id), aid = parseInt(m.away_team_id);
-    const hs = parseInt(m.home_score)||0, as = parseInt(m.away_score)||0;
+    const hs = parseInt(m.home_score) || 0, as = parseInt(m.away_score) || 0;
     if (!groups[g][hid]) groups[g][hid] = { id: hid, p: 0, gf: 0, ga: 0 };
     if (!groups[g][aid]) groups[g][aid] = { id: aid, p: 0, gf: 0, ga: 0 };
     groups[g][hid].gf += hs; groups[g][hid].ga += as;
@@ -319,7 +332,7 @@ function getThirdPlaceRanking(standings) {
 
 function getKnockoutWinner(match) {
   if (match.finished !== 'TRUE') return null;
-  const hs = parseInt(match.home_score)||0, as = parseInt(match.away_score)||0;
+  const hs = parseInt(match.home_score) || 0, as = parseInt(match.away_score) || 0;
   if (hs > as) return parseInt(match.home_team_id);
   if (as > hs) return parseInt(match.away_team_id);
   return null;
@@ -355,8 +368,21 @@ async function calculateUserFullScore(userId, matches) {
   const userGroupMap = {};
   if (gp) for (const p of gp) userGroupMap[p.group_id] = p;
 
+  const groupTotal = {};
+  const groupFinished = {};
+  for (const m of allMatches) {
+    if (m.type !== 'group') continue;
+    groupTotal[m.group] = (groupTotal[m.group] || 0) + 1;
+    if (m.finished === 'TRUE') groupFinished[m.group] = (groupFinished[m.group] || 0) + 1;
+  }
+  const completedGroups = new Set();
+  for (const g of Object.keys(groupTotal)) {
+    if (groupTotal[g] === (groupFinished[g] || 0)) completedGroups.add(g);
+  }
+
   for (const [g, teams] of Object.entries(standings)) {
-    if (teams.length < 2) continue;
+    if (!completedGroups.has(g)) continue;
+    if (teams.length < 4) continue;
     const actualFirst = teams[0].id;
     const actualSecond = teams[1].id;
     const pred = userGroupMap[g];
@@ -390,7 +416,8 @@ async function calculateUserFullScore(userId, matches) {
   }
 
   // --- THIRD PLACE ADVANCING ---
-  if (ta && advancingThirdIds.size === 8) {
+  const allGroupsComplete = Object.keys(groupTotal).length === 12 && completedGroups.size === 12;
+  if (allGroupsComplete && ta && advancingThirdIds.size === 8) {
     const userThirdIds = new Set(ta.map(t => t.team_id));
     for (const tid of userThirdIds) {
       if (advancingThirdIds.has(tid)) {
@@ -423,7 +450,7 @@ async function calculateUserFullScore(userId, matches) {
         const stageNames = { r32: 'Rodada de 32', r16: 'Oitavas', qf: 'Quartas', sf: 'Semifinais' };
         breakdown.push({
           category: 'knockout', reference_id: `m${mid}`, subreference_id: String(winner),
-          points: pts, reason: `${getTeamName(winner)} avançou nas ${stageNames[m.type]||m.type}`
+          points: pts, reason: `${getTeamName(winner)} avançou nas ${stageNames[m.type] || m.type}`
         });
         total += pts;
       }
@@ -435,7 +462,7 @@ async function calculateUserFullScore(userId, matches) {
   if (thirdMatch) {
     const winner = getKnockoutWinner(thirdMatch);
     if (winner) {
-      const pred = koMap['m103'];
+      const pred = koMap['third'];
       if (pred && pred.team_id == winner) {
         breakdown.push({
           category: 'third_place', reference_id: 'm103', subreference_id: String(winner),
@@ -449,7 +476,7 @@ async function calculateUserFullScore(userId, matches) {
   // --- FINAL ---
   const finalMatch = finished.find(m => m.type === 'final');
   if (finalMatch) {
-    const fhs = parseInt(finalMatch.home_score)||0, fas = parseInt(finalMatch.away_score)||0;
+    const fhs = parseInt(finalMatch.home_score) || 0, fas = parseInt(finalMatch.away_score) || 0;
     const fWinnerId = fhs > fas ? parseInt(finalMatch.home_team_id) : (fas > fhs ? parseInt(finalMatch.away_team_id) : null);
     const fLoserId = fhs > fas ? parseInt(finalMatch.away_team_id) : (fas > fhs ? parseInt(finalMatch.home_team_id) : null);
 
@@ -484,8 +511,8 @@ async function calculateUserFullScore(userId, matches) {
         });
         total += 200;
       } else if (fWinnerId && ((finalMp.home_score > finalMp.away_score && fhs > fas) ||
-                 (finalMp.away_score > finalMp.home_score && fas > fhs) ||
-                 (finalMp.home_score === finalMp.away_score && fhs === fas))) {
+        (finalMp.away_score > finalMp.home_score && fas > fhs) ||
+        (finalMp.home_score === finalMp.away_score && fhs === fas))) {
         breakdown.push({
           category: 'final_winner', reference_id: '104', subreference_id: null,
           points: 50, reason: 'Acertou o vencedor da final'
@@ -503,7 +530,7 @@ async function calculateUserFullScore(userId, matches) {
     const mid = parseInt(m.id);
     const pred = predMap[mid];
     if (!pred) continue;
-    const realH = parseInt(m.home_score)||0, realA = parseInt(m.away_score)||0;
+    const realH = parseInt(m.home_score) || 0, realA = parseInt(m.away_score) || 0;
     let pts = 0, reason = '';
     if (realH === pred.home_score && realA === pred.away_score) {
       pts = 10;
@@ -568,8 +595,8 @@ app.get('/api/history', authMiddleware, async (req, res) => {
       if (realH === pred.home_score && realA === pred.away_score) {
         entry.points = 10;
       } else if ((realH > realA && pred.home_score > pred.away_score) ||
-                 (realA > realH && pred.away_score > pred.home_score) ||
-                 (realH === realA && pred.home_score === pred.away_score)) {
+        (realA > realH && pred.away_score > pred.home_score) ||
+        (realH === realA && pred.home_score === pred.away_score)) {
         entry.points = 5;
       }
       if (entry.points !== (pred.points || 0)) {
