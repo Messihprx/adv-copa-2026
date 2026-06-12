@@ -1268,6 +1268,12 @@ body::before {
   font-size: 36px;
   color: var(--gold);
 }
+.live-score-sep {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-muted);
+  margin: 0 6px;
+}
 
 .live-score-sep {
   font-size: 28px;
@@ -1598,6 +1604,14 @@ body::before {
   align-items: center;
   gap: 6px;
   width: 100%;
+<<<<<<< HEAD
+=======
+}
+
+.final-match {
+  background: linear-gradient(135deg, rgba(247,212,74,0.05), rgba(247,212,74,0.01));
+  border-color: rgba(247,212,74,0.15);
+>>>>>>> 7897e58935ad6a5308006193cd516b1eec9da753
 }
 
 .final-match {
@@ -1902,6 +1916,7 @@ body::before {
   margin-right: 6px;
   animation: pulse 1.5s ease-in-out infinite;
 }
+<<<<<<< HEAD
 
 @keyframes pulse {
 
@@ -1915,12 +1930,18 @@ body::before {
   }
 }
 
+=======
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+>>>>>>> 7897e58935ad6a5308006193cd516b1eec9da753
 .live-meta-right {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 7897e58935ad6a5308006193cd516b1eec9da753
 .live-time-elapsed {
   font-size: 11px;
   font-weight: 700;
