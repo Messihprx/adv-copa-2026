@@ -67,9 +67,7 @@ function parseBrasilia(localDate, stadiumId) {
   const [hh, mi] = parts[1].split(':');
   const stdTz = STADIUM_TZ[stadiumId] || -5;
   const d = new Date(Date.UTC(parseInt(ye), parseInt(mo) - 1, parseInt(da), parseInt(hh) - stdTz, parseInt(mi)));
-  const brTz = -3;
-  const br = new Date(d.getTime() + (d.getTimezoneOffset() + brTz * 60) * 60000);
-  return br.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
 function flagUrl(name) { const c = FLAG_CODES[name] || 'unknown'; return `https://flagcdn.com/24x18/${c}.png`; }
@@ -302,7 +300,6 @@ function buildBracket() {
   propagateBracket();
 }
 
-<<<<<<< HEAD
 function propagateBracket() {
   for (const m of BRACKET.round32) {
     const s = bracketState.round32[m.id];
@@ -337,42 +334,6 @@ function propagateBracket() {
   const s1 = bracketState.semis[101], s2 = bracketState.semis[102];
   if (s1 && s1.winner && s1.home && s1.away) bracketState.third.home = s1.home === s1.winner ? s1.away : s1.home;
   if (s2 && s2.winner && s2.home && s2.away) bracketState.third.away = s2.home === s2.winner ? s2.away : s2.home;
-=======
-function propagateBracket(){
-  for(const m of BRACKET.round32){
-    const s=bracketState.round32[m.id];
-    if(!s||!s.winner)continue;
-    const r16=BRACKET.round16.find(x=>x.id===m.r16);
-    if(!r16)continue;
-    if(!bracketState.round16[r16.id])bracketState.round16[r16.id]={home:null,away:null,winner:null};
-    bracketState.round16[r16.id][m.side]=s.winner;
-  }
-  for(const m of BRACKET.round16){
-    const s=bracketState.round16[m.id];
-    if(!s||!s.winner)continue;
-    const q=BRACKET.quarters.find(x=>x.id===m.qf);
-    if(!q)continue;
-    if(!bracketState.quarters[q.id])bracketState.quarters[q.id]={home:null,away:null,winner:null};
-    bracketState.quarters[q.id][m.side]=s.winner;
-  }
-  for(const m of BRACKET.quarters){
-    const s=bracketState.quarters[m.id];
-    if(!s||!s.winner)continue;
-    const sf=BRACKET.semis.find(x=>x.id===m.sf);
-    if(!sf)continue;
-    if(!bracketState.semis[sf.id])bracketState.semis[sf.id]={home:null,away:null,winner:null};
-    bracketState.semis[sf.id][m.side]=s.winner;
-  }
-  for(const m of BRACKET.semis){
-    const s=bracketState.semis[m.id];
-    if(!s||!s.winner)continue;
-    const side=m.id===101?'home':'away';
-    bracketState.final[side]=s.winner;
-  }
-  const s1=bracketState.semis[101],s2=bracketState.semis[102];
-  if(s1&&s1.winner&&s1.home&&s1.away)bracketState.third.home=s1.home===s1.winner?s1.away:s1.home;
-  if(s2&&s2.winner&&s2.home&&s2.away)bracketState.third.away=s2.home===s2.winner?s2.away:s2.home;
->>>>>>> 7897e58935ad6a5308006193cd516b1eec9da753
 }
 
 function getGroupIdFromTeam(tid) {
@@ -469,7 +430,6 @@ function selectKnockoutWinner(round, matchId, teamId) {
       }
     }
   }
-<<<<<<< HEAD
   if (round === 'semis') {
     const side = matchId === 101 ? 'home' : 'away';
     bracketState.final[side] = teamId; bracketState.final.winner = null;
@@ -484,22 +444,6 @@ function selectKnockoutWinner(round, matchId, teamId) {
   if (round === 'third' && matchId === 103) {
     bracketState.third.winner = teamId;
     renderBracket(); return;
-=======
-  if(round==='semis'){
-    const side=matchId===101?'home':'away';
-    bracketState.final[side]=teamId;bracketState.final.winner=null;
-    const m=bracketState.semis[matchId];
-    if(m&&m.home&&m.away){
-      const loser=m.home===teamId?m.away:m.home;
-      if(matchId===101)bracketState.third.home=loser;
-      else bracketState.third.away=loser;
-    }
-    bracketState.third.winner=null;
-  }
-  if(round==='third'&&matchId===103){
-    bracketState.third.winner=teamId;
-    renderBracket();return;
->>>>>>> 7897e58935ad6a5308006193cd516b1eec9da753
   }
   renderBracket();
 }
@@ -517,7 +461,6 @@ function renderBracket() {
     const t = getTeam(tid); if (!t) return '<div class="ms">---</div>';
     return `<div class="ms${isWinner ? ' msw' : ''}" ${click ? `onclick="${click}"` : ''}><span class="msf">${flagImg(t.name, 18)}</span><span class="msn">${t.name}</span></div>`;
   }
-<<<<<<< HEAD
   function row(m) {
     const s = bracketState.round32[m.id] || {}, ht = s?.home, at = s?.away, wn = s?.winner;
     const locked = lockedMatches.includes(m.id);
@@ -525,15 +468,6 @@ function renderBracket() {
     const hc = ht && !locked ? `selectKnockoutWinner('round32',${m.id},${ht})` : null;
     const ac = at && !locked ? `selectKnockoutWinner('round32',${m.id},${at})` : null;
     return `<div class="match">${mc(ht, hc, wn && wn == ht)}<div class="msep"><span class="ml">${m.label}</span>${wn && wn == ht ? '<span class="mx">\u2714</span>' : 'VS'}</div>${mc(at, ac, wn && wn == at)}${locked ? '<div class="mlock">\uD83D\uDD12</div>' : ''}</div>`;
-=======
-  function row(m){
-    const s=bracketState.round32[m.id]||{},ht=s?.home,at=s?.away,wn=s?.winner;
-    const locked=lockedMatches.includes(m.id);
-    const is3=isSlotThird(m.away);
-    const hc=ht&&!locked?`selectKnockoutWinner('round32',${m.id},${ht})`:null;
-    const ac=at&&!locked?`selectKnockoutWinner('round32',${m.id},${at})`:null;
-    return`<div class="match">${mc(ht,hc,wn&&wn==ht)}<div class="msep"><span class="ml">${m.label}</span>${wn&&wn==ht?'<span class="mx">\u2714</span>':'VS'}</div>${mc(at,ac,wn&&wn==at)}${locked?'<div class="mlock">\uD83D\uDD12</div>':''}</div>`;
->>>>>>> 7897e58935ad6a5308006193cd516b1eec9da753
   }
   function col(matches, roundKey, roundLabel) {
     let h = `<div class="bcol"><div class="brl">${roundLabel}</div>`;
@@ -550,7 +484,6 @@ function renderBracket() {
     }
     h += `</div>`; return h;
   }
-<<<<<<< HEAD
   let h = `<div class="bracket-wrapper">`;
   h += `<div class="bgrid">`;
   h += col(BRACKET.round32, 'r32', 'Rodada de 32');
@@ -566,23 +499,6 @@ function renderBracket() {
       <div class="msep">VS</div>
       <div class="final-team-score-row">${mc(fs.away, fa && !fs.winner ? `selectKnockoutWinner('final',104,${fs.away})` : null, fw && fw.id == fs.away)}<input type="number" min="0" max="20" class="si" id="faScore" value="${fs.awayScore || ''}" placeholder="0" onchange="updateFinalScore()"></div>
       ${fw ? `<div class="mt champ">\uD83C\uDFC6${flagImg(fw.name, 20)}${fw.name}</div>` : ''}
-=======
-  let h=`<div class="bracket-wrapper">`;
-  h+=`<div class="bgrid">`;
-  h+=col(BRACKET.round32,'r32','Rodada de 32');
-  h+=col(BRACKET.round16,'round16','Oitavas');
-  h+=col(BRACKET.quarters,'quarters','Quartas');
-  h+=col(BRACKET.semis,'semis','Semifinais');
-  const fs=bracketState.final||{},fh=getTeam(fs.home),fa=getTeam(fs.away),fw=getTeam(fs.winner);
-  const ts=bracketState.third||{},th=getTeam(ts.home),ta=getTeam(ts.away),tw=getTeam(ts.winner);
-  h+=`<div class="bcol bcol-final"><div class="brl">Finais</div>
-    <div class="third-match"><div class="ml bronze">3\u00ba</div>${th?mc(th.id,th&&!tw&&!lockedMatches.includes(103)?`selectKnockoutWinner('third',103,${th.id})`:null,tw&&tw.id==th.id):'<div class="ms">---</div>'}<div class="msep">VS</div>${ta?mc(ta.id,ta&&!tw&&!lockedMatches.includes(103)?`selectKnockoutWinner('third',103,${ta.id})`:null,tw&&tw.id==ta.id):'<div class="ms">---</div>'}${tw?`<div class="mt bronze">\uD83E\uDD49${flagImg(tw.name,14)}${tw.name}</div>`:''}${lockedMatches.includes(103)?'<div class="mlock">\uD83D\uDD12</div>':''}</div>
-    <div class="final-match"><div class="ml gold">\uD83C\uDFC6Final</div>
-      <div class="final-team-score-row">${mc(fs.home,fh&&!fs.winner?`selectKnockoutWinner('final',104,${fs.home})`:null,fw&&fw.id==fs.home)}<input type="number" min="0" max="20" class="si" id="fhScore" value="${fs.homeScore||''}" placeholder="0" onchange="updateFinalScore()"></div>
-      <div class="msep">VS</div>
-      <div class="final-team-score-row">${mc(fs.away,fa&&!fs.winner?`selectKnockoutWinner('final',104,${fs.away})`:null,fw&&fw.id==fs.away)}<input type="number" min="0" max="20" class="si" id="faScore" value="${fs.awayScore||''}" placeholder="0" onchange="updateFinalScore()"></div>
-      ${fw?`<div class="mt champ">\uD83C\uDFC6${flagImg(fw.name,20)}${fw.name}</div>`:''}
->>>>>>> 7897e58935ad6a5308006193cd516b1eec9da753
     </div></div>`;
   h += `</div></div>`;
   c.innerHTML = h;
@@ -651,7 +567,6 @@ async function saveMatchPrediction() {
   matchPredictions = await apiCall('/predictions/match') || [];
   hideMatchModal(); renderLiveMatches(); showToast('Palpite salvo!');
 }
-<<<<<<< HEAD
 function startMatchTimer(mid) {
   if (matchTimerInterval) clearInterval(matchTimerInterval);
   const d = document.getElementById('matchModalTimer');
@@ -673,29 +588,6 @@ function startMatchTimer(mid) {
       const h = Math.floor(diff / 3600000), m = Math.floor((diff % 3600000) / 60000), s = Math.floor((diff % 60000) / 1000);
       d.textContent = `⏳ Palpite disponível por mais: ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
       matchModalLocked = false;
-=======
-function startMatchTimer(mid){
-  if(matchTimerInterval)clearInterval(matchTimerInterval);
-  const d=document.getElementById('matchModalTimer');
-  matchTimerInterval=setInterval(async function(){
-    const matches=await apiCall('/live-matches');
-    const match=matches?.all?.find(m=>parseInt(m.id)===mid);
-    if(!match||!match.local_date){d.textContent='';return;}
-    const parts=match.local_date.split(' ');
-    if(parts.length<2){d.textContent='';return;}
-    const [mo,da,ye]=parts[0].split('/');
-    const [hh,mi]=parts[1].split(':');
-    const stdTz=STADIUM_TZ[match.stadium_id]||-5;
-    const matchUtc=Date.UTC(parseInt(ye),parseInt(mo)-1,parseInt(da),parseInt(hh)-stdTz,parseInt(mi));
-    const now=Date.now();
-    const diff=matchUtc-now;
-    if(diff<=0){d.textContent='⏰ Jogo começou!';matchModalLocked=true;clearInterval(matchTimerInterval);matchTimerInterval=null;return;}
-    if(diff<60000){d.textContent='⏰ Menos de 1 minuto!';matchModalLocked=true;}
-    else{
-      const h=Math.floor(diff/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
-      d.textContent=`⏳ Palpite disponível por mais: ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-      matchModalLocked=false;
->>>>>>> 7897e58935ad6a5308006193cd516b1eec9da753
     }
   }, 1000);
 }
@@ -731,13 +623,8 @@ async function renderLiveMatches() {
           <div class="live-score-row"><span class="live-score big">${hs}</span><span class="live-score-sep">x</span><span class="live-score big">${as}</span></div>
           <div class="live-team"><span class="team-name">${awayN}</span>${liveFlagImg(awayN)}</div>
         </div>
-<<<<<<< HEAD
         <div class="live-meta"><span class="live-stage">${STAGE_NAMES[m.type] || m.group || ''}</span><span class="live-meta-right">${m.local_date ? `<span class="live-time">${parseBrasilia(m.local_date, m.stadium_id)}</span>` : ''}${m.time_elapsed ? `<span class="live-time-elapsed">${m.time_elapsed}</span>` : ''}</span></div>
         ${userPredictionHtml(parseInt(m.id), homeN, awayN)}
-=======
-        <div class="live-meta"><span class="live-stage">${STAGE_NAMES[m.type]||m.group||''}</span><span class="live-meta-right">${m.local_date?`<span class="live-time">${parseBrasilia(m.local_date,m.stadium_id)}</span>`:''}${m.time_elapsed?`<span class="live-time-elapsed">${m.time_elapsed}</span>`:''}</span></div>
-        ${userPredictionHtml(parseInt(m.id),homeN,awayN)}
->>>>>>> 7897e58935ad6a5308006193cd516b1eec9da753
       </div>`;
     }
     h += '</div>';
