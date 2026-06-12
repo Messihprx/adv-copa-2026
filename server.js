@@ -151,6 +151,17 @@ app.get('/api/live-matches', async (req, res) => {
   res.json({ live, today, upcoming, all: matches, userPredictions: userPreds });
 });
 
+app.get('/api/live-scores', async (req, res) => {
+  const matches = await fetchMatches();
+  const live = matches.filter(m => m.time_elapsed && m.time_elapsed !== 'notstarted' && m.finished !== 'TRUE');
+  res.json(live.map(m => ({
+    id: parseInt(m.id),
+    home_score: m.home_score || 0,
+    away_score: m.away_score || 0,
+    time_elapsed: m.time_elapsed
+  })));
+});
+
 app.get('/api/locked-matches', async (req, res) => {
   const matches = await fetchMatches();
   const locked = matches.filter(m =>

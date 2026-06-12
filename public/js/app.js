@@ -11,6 +11,7 @@ let bracketState = {};
 let lockedMatches = [];
 let liveInterval = null;
 let resultsInterval = null;
+let scoreUpdateInterval = null;
 
 const FLAG_CODES = {
   'M\u00e9xico': 'mx', '\u00c1frica do Sul': 'za', 'Coreia do Sul': 'kr', 'Rep\u00fablica Tcheca': 'cz',
@@ -92,7 +93,7 @@ async function apiCall(path, opts) {
 
 function showAuth() { document.getElementById('authContainer').style.display = 'flex'; document.getElementById('appContainer').classList.remove('show'); }
 function showApp() { document.getElementById('authContainer').style.display = 'none'; document.getElementById('appContainer').classList.add('show'); }
-function logout() { localStorage.removeItem('token'); token = null; currentUser = null; if (liveInterval) clearInterval(liveInterval); showAuth(); }
+function logout() { localStorage.removeItem('token'); token = null; currentUser = null; if (liveInterval) clearInterval(liveInterval); if (liveScoreInterval) clearInterval(liveScoreInterval); showAuth(); }
 
 document.querySelectorAll('.auth-tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -616,7 +617,8 @@ async function renderLiveMatches() {
     for (const m of live) {
       const homeN = m.home_team_name_en || 'Time A', awayN = m.away_team_name_en || 'Time B';
       const hs = m.home_score || 0, as = m.away_score || 0;
-      h += `<div class="live-card live-card-live">
+      const mid = parseInt(m.id);
+      h += `<div class="live-card live-card-live" data-match-id="${mid}">
         ${liveCardBadge('live')}
         <div class="live-teams">
           <div class="live-team">${liveFlagImg(homeN)}<span class="team-name">${homeN}</span></div>
@@ -624,7 +626,7 @@ async function renderLiveMatches() {
           <div class="live-team"><span class="team-name">${awayN}</span>${liveFlagImg(awayN)}</div>
         </div>
         <div class="live-meta"><span class="live-stage">${STAGE_NAMES[m.type] || m.group || ''}</span><span class="live-meta-right">${m.local_date ? `<span class="live-time">${parseBrasilia(m.local_date, m.stadium_id)}</span>` : ''}${m.time_elapsed ? `<span class="live-time-elapsed">${m.time_elapsed}</span>` : ''}</span></div>
-        ${userPredictionHtml(parseInt(m.id), homeN, awayN)}
+        ${userPredictionHtml(mid, homeN, awayN)}
       </div>`;
     }
     h += '</div>';
@@ -669,6 +671,35 @@ async function renderLiveMatches() {
     h = `<div class="live-empty"><span class="icon">\uD83C\uDFC6</span><h3>Nenhum jogo rolando no momento</h3><p>Volte durante a Copa do Mundo 2026 para acompanhar os jogos ao vivo!<br>A Copa come\u00e7a em 11 de junho de 2026.</p></div>`;
   }
   c.innerHTML = h;
+  startLiveScoreUpdates();
+}
+
+let liveScoreInterval = null;
+
+function startLiveScoreUpdates() {
+  if (liveScoreInterval) { clearInterval(liveScoreInterval); liveScoreInterval = null; }
+  const liveCards = document.querySelectorAll('.live-card-live');
+  if (!liveCards.length) return;
+  liveScoreInterval = setInterval(async () => {
+    const scores = await apiCall('/live-scores');
+    if (!scores || !scores.length) return;
+    for (const s of scores) {
+      const card = document.querySelector(`.live-card-live[data-match-id="${s.id}"]`);
+      if (!card) continue;
+      const scoresEl = card.querySelectorAll('.live-score.big');
+      if (scoresEl.length >= 2) {
+        scoresEl[0].textContent = s.home_score;
+        scoresEl[1].textContent = s.away_score;
+      }
+      const elapsed = card.querySelector('.live-time-elapsed');
+      if (elapsed) elapsed.textContent = s.time_elapsed;
+    }
+    const stillLive = document.querySelectorAll('.live-card-live').length;
+    if (!stillLive && liveScoreInterval) {
+      clearInterval(liveScoreInterval);
+      liveScoreInterval = null;
+    }
+  }, 10000);
 }
 
 async function renderResults() {
