@@ -1424,7 +1424,7 @@ body::after {
 
 .live-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 16px;
 }
 
@@ -1551,6 +1551,7 @@ body::after {
   align-items: center;
   gap: 10px;
   flex: 1;
+  min-width: 0;
 }
 
 .live-team:last-child {
@@ -1571,6 +1572,9 @@ body::after {
 .team-name {
   font-size: 14px;
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .live-score {
@@ -2623,6 +2627,10 @@ body::after {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .hist-score {
@@ -2630,12 +2638,14 @@ body::after {
   font-weight: 800;
   color: var(--gold);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .hist-details {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   background: var(--bg-input);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
@@ -2643,12 +2653,24 @@ body::after {
 
 .hist-pred {
   font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.hist-pred strong {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--gold);
+  white-space: nowrap;
 }
 
 .hist-pred-label {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
-  margin-right: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .hist-pred.none {
