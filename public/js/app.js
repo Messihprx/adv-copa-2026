@@ -16,7 +16,7 @@ let scoreUpdateInterval = null;
 const FLAG_CODES = {
   'M\u00e9xico': 'mx', '\u00c1frica do Sul': 'za', 'Coreia do Sul': 'kr', 'Rep\u00fablica Tcheca': 'cz',
   'Canad\u00e1': 'ca', 'B\u00f3snia e Herzegovina': 'ba', 'Catar': 'qa', 'Su\u00ed\u00e7a': 'ch',
-  'Brasil': 'br', 'Marrocos': 'ma', 'Haiti': 'ht', 'Esc\u00f3cia': 'gb',
+  'Brasil': 'br', 'Marrocos': 'ma', 'Haiti': 'ht', 'Esc\u00f3cia': 'gb-sct',
   'Estados Unidos': 'us', 'Paraguai': 'py', 'Austr\u00e1lia': 'au', 'Turquia': 'tr',
   'Alemanha': 'de', 'Cura\u00e7ao': 'cw', 'Costa do Marfim': 'ci', 'Equador': 'ec',
   'Holanda': 'nl', 'Jap\u00e3o': 'jp', 'Su\u00e9cia': 'se', 'Tun\u00edsia': 'tn',
@@ -25,7 +25,7 @@ const FLAG_CODES = {
   'Fran\u00e7a': 'fr', 'Senegal': 'sn', 'Iraque': 'iq', 'Noruega': 'no',
   'Argentina': 'ar', 'Arg\u00e9lia': 'dz', '\u00c1ustria': 'at', 'Jord\u00e2nia': 'jo',
   'Portugal': 'pt', 'RD Congo': 'cd', 'Uzbequist\u00e3o': 'uz', 'Col\u00f4mbia': 'co',
-  'Inglaterra': 'gb', 'Cro\u00e1cia': 'hr', 'Gana': 'gh', 'Panam\u00e1': 'pa'
+  'Inglaterra': 'gb-eng', 'Cro\u00e1cia': 'hr', 'Gana': 'gh', 'Panam\u00e1': 'pa'
 };
 
 const STAGE_NAMES = { group: 'Fase de Grupos', r32: 'Rodada de 32', r16: 'Oitavas', qf: 'Quartas', sf: 'Semi', third: '3\u00ba lugar', final: 'Final' };
@@ -33,7 +33,7 @@ const STAGE_NAMES = { group: 'Fase de Grupos', r32: 'Rodada de 32', r16: 'Oitava
 const API_FLAGS = {
   'Mexico': 'mx', 'South Africa': 'za', 'South Korea': 'kr', 'Korea Republic': 'kr', 'Czech Republic': 'cz', 'Czechia': 'cz',
   'Canada': 'ca', 'Bosnia and Herzegovina': 'ba', 'Qatar': 'qa', 'Switzerland': 'ch',
-  'Brazil': 'br', 'Morocco': 'ma', 'Haiti': 'ht', 'Scotland': 'gb',
+  'Brazil': 'br', 'Morocco': 'ma', 'Haiti': 'ht', 'Scotland': 'gb-sct',
   'USA': 'us', 'United States': 'us', 'Paraguay': 'py', 'Australia': 'au', 'Turkey': 'tr', 'T\u00fcrkiye': 'tr',
   'Germany': 'de', 'Cura\u00e7ao': 'cw', 'Curacao': 'cw', 'Ivory Coast': 'ci', 'C\u00f4te d\'Ivoire': 'ci', 'Ecuador': 'ec',
   'Netherlands': 'nl', 'Japan': 'jp', 'Sweden': 'se', 'Tunisia': 'tn',
@@ -42,7 +42,7 @@ const API_FLAGS = {
   'France': 'fr', 'Senegal': 'sn', 'Iraq': 'iq', 'Norway': 'no',
   'Argentina': 'ar', 'Algeria': 'dz', 'Austria': 'at', 'Jordan': 'jo',
   'Portugal': 'pt', 'Colombia': 'co', 'Uzbekistan': 'uz', 'Democratic Republic of the Congo': 'cd', 'Congo DR': 'cd',
-  'England': 'gb', 'Croatia': 'hr', 'Ghana': 'gh', 'Panama': 'pa'
+  'England': 'gb-eng', 'Croatia': 'hr', 'Ghana': 'gh', 'Panama': 'pa'
 };
 
 function liveFlag(name) {
@@ -599,6 +599,39 @@ function liveCardBadge(status) {
   return '<span class="live-badge upcoming">⏳ Aguardando</span>';
 }
 
+function formatStatus(m) {
+  const short = m.status_short;
+  if (!short) return m.time_elapsed || '';
+  if (short === 'NS') return 'Não Começou';
+  if (short === '1H') return m.live_minute ? `1ºT ${m.live_minute}'` : '1º Tempo';
+  if (short === 'HT') return 'Intervalo';
+  if (short === '2H') return m.live_minute ? `2ºT ${m.live_minute}'` : '2º Tempo';
+  if (short === 'ET') return m.live_minute ? `${m.live_minute}'` : '';
+  if (short === 'P' || short === 'PEN') return 'Pênaltis';
+  if (short === 'FT' || short === 'AET') return 'Encerrado';
+  if (short === 'SUSP') return 'Suspenso';
+  return short;
+}
+
+function formatMatchDate(m) {
+  if (m.iso_date || m.timestamp) {
+    const d = m.timestamp ? new Date(m.timestamp * 1000) : new Date(m.iso_date);
+    return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
+  return parseBrasilia(m.local_date, m.stadium_id);
+}
+
+function formatScoreBreakdown(m) {
+  if (!m.score_halftime || (m.score_halftime.home === null && m.score_fulltime?.home === null)) return '';
+  let html = '<div class="match-score-breakdown">';
+  if (m.score_halftime.home !== null) html += `<span><small>HT</small> ${m.score_halftime.home}x${m.score_halftime.away}</span>`;
+  if (m.score_fulltime.home !== null) html += `<span><small>FT</small> ${m.score_fulltime.home}x${m.score_fulltime.away}</span>`;
+  if (m.score_extratime?.home !== null) html += `<span><small>ET</small> ${m.score_extratime.home}x${m.score_extratime.away}</span>`;
+  if (m.score_penalty?.home !== null) html += `<span><small>PEN</small> ${m.score_penalty.home}x${m.score_penalty.away}</span>`;
+  html += '</div>';
+  return html;
+}
+
 function userPredictionHtml(mid, homeN, awayN) {
   const pred = matchPredictions.find(p => p.match_id == mid);
   if (!pred) return `<button class="btn btn-sm btn-guess" onclick="showMatchModal(${mid},'${homeN.replace(/'/g, "\\'")}','${awayN.replace(/'/g, "\\'")}')">🔮 Adivinhar</button>`;
@@ -613,19 +646,25 @@ async function renderLiveMatches() {
   const live = d.live || [], today = d.today || [], upcoming = d.upcoming || [];
   let h = '';
   if (live.length) {
-    h += `<div class="section-title"><span class="live-badge live"><span class="dot-pulse"></span> AO VIVO</span> ${live.length} jogo(s) agora</div><div class="live-grid">`;
+    h += `<div class="section-title"><span class="dot-pulse"></span> ${live.length} jogo(s) ao vivo agora</div><div class="live-grid">`;
     for (const m of live) {
       const homeN = m.home_team_name_en || 'Time A', awayN = m.away_team_name_en || 'Time B';
       const hs = m.home_score || 0, as = m.away_score || 0;
       const mid = parseInt(m.id);
       h += `<div class="live-card live-card-live" data-match-id="${mid}">
-        ${liveCardBadge('live')}
         <div class="live-teams">
           <div class="live-team">${liveFlagImg(homeN)}<span class="team-name">${homeN}</span></div>
           <div class="live-score-row"><span class="live-score big">${hs}</span><span class="live-score-sep">x</span><span class="live-score big">${as}</span></div>
           <div class="live-team"><span class="team-name">${awayN}</span>${liveFlagImg(awayN)}</div>
         </div>
-        <div class="live-meta"><span class="live-stage">${STAGE_NAMES[m.type] || m.group || ''}</span><span class="live-meta-right">${m.local_date ? `<span class="live-time">${parseBrasilia(m.local_date, m.stadium_id)}</span>` : ''}${m.time_elapsed ? `<span class="live-time-elapsed">${m.time_elapsed}</span>` : ''}</span></div>
+        ${formatScoreBreakdown(m)}
+        <div class="live-meta">
+          <span class="live-stage">${STAGE_NAMES[m.type] || m.group || ''}</span>
+          <span class="live-meta-right">
+            <span class="live-time">${formatMatchDate(m)}</span>
+            <span class="live-time-elapsed">${formatStatus(m)}</span>
+          </span>
+        </div>
         ${userPredictionHtml(mid, homeN, awayN)}
       </div>`;
     }
@@ -635,7 +674,7 @@ async function renderLiveMatches() {
     h += `<div class="section-title">\uD83D\uDDC3\uFE0F Jogos de Hoje</div><div class="live-grid">`;
     for (const m of today) {
       const homeN = m.home_team_name_en || 'Time A', awayN = m.away_team_name_en || 'Time B';
-      const brTime = m.local_date ? parseBrasilia(m.local_date, m.stadium_id) : '';
+      const brTime = formatMatchDate(m);
       h += `<div class="live-card live-card-today">
         ${liveCardBadge('upcoming')}
         <div class="live-badge time">\uD83D\uDD51 ${brTime || 'Hoje'}</div>
@@ -644,7 +683,10 @@ async function renderLiveMatches() {
           <span class="live-score">vs</span>
           <div class="live-team"><span class="team-name">${awayN}</span>${liveFlagImg(awayN)}</div>
         </div>
-        <div class="live-meta"><span class="live-stage">${STAGE_NAMES[m.type] || m.group || ''}</span></div>
+        <div class="live-meta">
+          <span class="live-stage">${STAGE_NAMES[m.type] || m.group || ''}</span>
+          <span class="live-meta-right"><span class="live-time-elapsed">${formatStatus(m)}</span></span>
+        </div>
         ${userPredictionHtml(parseInt(m.id), homeN, awayN)}
       </div>`;
     }
@@ -654,7 +696,7 @@ async function renderLiveMatches() {
     h += `<div class="section-title">\uD83D\uDCC5 Pr\u00f3ximos Jogos</div><div class="live-grid">`;
     for (const m of upcoming.slice(0, 6)) {
       const homeN = m.home_team_name_en || 'TBD', awayN = m.away_team_name_en || 'TBD';
-      const brTime = m.local_date ? parseBrasilia(m.local_date, m.stadium_id) : '';
+      const brTime = formatMatchDate(m);
       h += `<div class="live-card live-card-upcoming">
         <div class="live-badge time">\uD83D\uDD51 ${brTime || 'Agendado'}</div>
         <div class="live-teams">
@@ -662,7 +704,10 @@ async function renderLiveMatches() {
           <span class="live-score">vs</span>
           <div class="live-team"><span class="team-name">${awayN}</span>${awayN !== 'TBD' ? liveFlagImg(awayN) : ''}</div>
         </div>
-        <div class="live-meta"><span class="live-stage">${STAGE_NAMES[m.type] || m.group || ''}</span></div>
+        <div class="live-meta">
+          <span class="live-stage">${STAGE_NAMES[m.type] || m.group || ''}</span>
+          <span class="live-meta-right"><span class="live-time-elapsed">${formatStatus(m)}</span></span>
+        </div>
       </div>`;
     }
     h += '</div>';
@@ -670,8 +715,105 @@ async function renderLiveMatches() {
   if (!live.length && !today.length && !upcoming.length) {
     h = `<div class="live-empty"><span class="icon">\uD83C\uDFC6</span><h3>Nenhum jogo rolando no momento</h3><p>Volte durante a Copa do Mundo 2026 para acompanhar os jogos ao vivo!<br>A Copa come\u00e7a em 11 de junho de 2026.</p></div>`;
   }
+  h += renderGroupScheduleCards();
+  h += renderKnockoutSchedule(d.all || []);
   c.innerHTML = h;
   startLiveScoreUpdates();
+  attachGroupCardEvents();
+}
+
+function renderGroupScheduleCards() {
+  if (!groupsData.length) return '';
+  let h = `<div class="section-title" style="margin-top:32px">\uD83C\uDFC6 Programação dos Grupos</div>`;
+  h += `<div class="groups-schedule-grid">`;
+  for (const g of groupsData) {
+    let flagsHtml = '';
+    for (const t of g.teams) {
+      flagsHtml += `<span class="gs-flag">${flagImg(t.name, 26)}</span>`;
+    }
+    h += `<div class="gs-card" data-group="${g.id}">
+      <div class="gs-header">
+        <div class="group-badge">${g.id}</div>
+        <span class="gs-name">${g.name}</span>
+      </div>
+      <div class="gs-flags">${flagsHtml}</div>
+      <div class="gs-arrow">\u25BC</div>
+      <div class="gs-matches" id="gsMatches_${g.id}"></div>
+    </div>`;
+  }
+  h += `</div>`;
+  return h;
+}
+
+function attachGroupCardEvents() {
+  document.querySelectorAll('.gs-card').forEach(card => {
+    card.addEventListener('click', async function(e) {
+      if (e.target.closest('.gs-matches')) return;
+      const gid = this.dataset.group;
+      const container = this.querySelector('.gs-matches');
+      if (container.innerHTML) {
+        container.innerHTML = '';
+        this.classList.remove('expanded');
+        return;
+      }
+      this.classList.add('expanded');
+      container.innerHTML = '<div class="loading-spinner" style="padding:16px"><div class="spinner"></div></div>';
+      const d = await apiCall('/live-matches');
+      if (!d || !d.all) { container.innerHTML = ''; return; }
+      const groupMatches = d.all.filter(m => m.type === 'group' && m.group === gid)
+        .sort((a, b) => {
+          const dateA = a.local_date || '', dateB = b.local_date || '';
+          return dateA.localeCompare(dateB);
+        });
+      if (!groupMatches.length) { container.innerHTML = '<div class="gs-empty">Nenhuma partida</div>'; return; }
+      let html = '';
+      for (const m of groupMatches) {
+        const hn = m.home_team_name_en || 'Time A', an = m.away_team_name_en || 'Time B';
+        const brTime = formatMatchDate(m);
+        const status = m.finished === 'TRUE' ? `${m.home_score || 0} x ${m.away_score || 0}` : (m.time_elapsed && m.time_elapsed !== 'notstarted' ? `${m.home_score || 0} x ${m.away_score || 0}` : 'vs');
+        html += `<div class="gs-match">
+          <span class="gs-match-time">${brTime || '—'}</span>
+          <span class="gs-match-teams">${liveFlagImg(hn)}${hn}</span>
+          <span class="gs-match-score">${status}</span>
+          <span class="gs-match-teams">${an}${liveFlagImg(an)}</span>
+        </div>`;
+      }
+      container.innerHTML = html;
+    });
+  });
+}
+
+function renderKnockoutSchedule(allMatches) {
+  const stages = [
+    { key: 'r32', label: 'Rodada de 32' },
+    { key: 'r16', label: 'Oitavas de Final' },
+    { key: 'qf', label: 'Quartas de Final' },
+    { key: 'sf', label: 'Semifinais' },
+    { key: 'third', label: 'Disputa de 3º lugar' },
+    { key: 'final', label: 'Final' }
+  ];
+  let h = `<div class="section-title" style="margin-top:32px">\uD83C\uDFF4 Programação do Mata-Mata</div>`;
+  for (const stage of stages) {
+    const matches = allMatches.filter(m => m.type === stage.key)
+      .sort((a, b) => (a.local_date || '').localeCompare(b.local_date || ''));
+    if (!matches.length) continue;
+    h += `<div class="ko-schedule-round">
+      <div class="ko-schedule-label">${stage.label}</div>
+      <div class="ko-schedule-matches">`;
+    for (const m of matches) {
+      const hn = m.home_team_name_en || 'TBD', an = m.away_team_name_en || 'TBD';
+      const brTime = formatMatchDate(m);
+      const status = m.finished === 'TRUE' ? `${m.home_score || 0} x ${m.away_score || 0}` : (m.time_elapsed && m.time_elapsed !== 'notstarted' ? `${m.home_score || 0} x ${m.away_score || 0}` : 'vs');
+      h += `<div class="ko-schedule-match">
+        <span class="ko-sched-time">${brTime || '—'}</span>
+        <span class="ko-sched-teams">${hn !== 'TBD' ? liveFlagImg(hn) : ''}${hn}</span>
+        <span class="ko-sched-score">${status}</span>
+        <span class="ko-sched-teams">${an}${an !== 'TBD' ? liveFlagImg(an) : ''}</span>
+      </div>`;
+    }
+    h += `</div></div>`;
+  }
+  return h || '';
 }
 
 let liveScoreInterval = null;
@@ -680,7 +822,7 @@ function startLiveScoreUpdates() {
   if (liveScoreInterval) { clearInterval(liveScoreInterval); liveScoreInterval = null; }
   const liveCards = document.querySelectorAll('.live-card-live');
   if (!liveCards.length) return;
-  liveScoreInterval = setInterval(async () => {
+  const myInterval = setInterval(async () => {
     const scores = await apiCall('/live-scores');
     if (!scores || !scores.length) return;
     for (const s of scores) {
@@ -694,12 +836,12 @@ function startLiveScoreUpdates() {
       const elapsed = card.querySelector('.live-time-elapsed');
       if (elapsed) elapsed.textContent = s.time_elapsed;
     }
-    const stillLive = document.querySelectorAll('.live-card-live').length;
-    if (!stillLive && liveScoreInterval) {
-      clearInterval(liveScoreInterval);
-      liveScoreInterval = null;
+    if (!document.querySelectorAll('.live-card-live').length) {
+      clearInterval(myInterval);
+      if (liveScoreInterval === myInterval) liveScoreInterval = null;
     }
   }, 10000);
+  liveScoreInterval = myInterval;
 }
 
 async function renderResults() {

@@ -55,16 +55,101 @@ function authMiddleware(req, res, next) {
 
 async function fetchMatches() {
   const now = Date.now();
+  const mockScores = require('./mock_scores.json');
   if (liveMatchesCache && (now - liveCacheTime) < CACHE_TTL) return liveMatchesCache;
+
   try {
     const res = await fetch(`${WC_API}/get/games`, {
       headers: { 'Accept': 'application/json' }
     });
     const data = await res.json();
-    liveMatchesCache = Array.isArray(data) ? data : (data.games || []);
+    let games = Array.isArray(data) ? data : (data.games || []);
+
+    const merged = games.map(m => {
+      let matchUtc = m.local_date ? parseMatchUTC(m.local_date, m.stadium_id) : null;
+      let timestamp = matchUtc ? Math.floor(matchUtc / 1000) : null;
+      let isoDate = matchUtc ? new Date(matchUtc).toISOString() : null;
+
+      let simulatedStatus = m.finished === 'TRUE' ? 'FT' : 'NS';
+      let simulatedElapsed = null;
+
+      // Motor de tempo real: se a API não atualizar o time_elapsed, o relógio local garante o status preciso
+      if (matchUtc && m.finished !== 'TRUE') {
+        const diffMs = now - matchUtc;
+        if (diffMs >= 0) {
+          const diffMins = Math.floor(diffMs / 60000);
+          if (diffMins < 45) { simulatedStatus = '1H'; simulatedElapsed = diffMins; }
+          else if (diffMins < 60) { simulatedStatus = 'HT'; simulatedElapsed = 45; }
+          else if (diffMins < 120) { simulatedStatus = '2H'; simulatedElapsed = Math.min(90, diffMins - 15) + '+'; }
+          else { simulatedStatus = 'FT'; simulatedElapsed = 90; }
+        }
+      }
+
+      // Tenta usar o valor da API se for rico, senão usa o motor em tempo real
+      let apiElapsed = m.time_elapsed;
+      let statusShort = 'NS';
+      let liveMin = simulatedElapsed;
+
+      if (apiElapsed === 'finished' || m.finished === 'TRUE') {
+        statusShort = 'FT';
+      } else if (apiElapsed === 'halftime' || apiElapsed === 'HT') {
+        statusShort = 'HT';
+      } else if (apiElapsed !== 'notstarted' && apiElapsed) {
+        liveMin = apiElapsed.replace("'", "");
+        let minNum = parseInt(liveMin);
+        if (minNum <= 45) statusShort = '1H';
+        else if (minNum <= 90) statusShort = '2H';
+        else statusShort = 'ET';
+      } else {
+        // Se a API mandar notstarted ou null, dependemos do motor de tempo real
+        statusShort = simulatedStatus;
+      }
+
+      let homeScore = parseInt(m.home_score) || 0;
+      let awayScore = parseInt(m.away_score) || 0;
+      let score_halftime = { home: null, away: null };
+      let score_fulltime = { home: null, away: null };
+
+      // Override with mock scores if available
+      if (mockScores && mockScores[m.id]) {
+        const ms = mockScores[m.id];
+        if (typeof ms.home === 'number') homeScore = ms.home;
+        if (typeof ms.away === 'number') awayScore = ms.away;
+        if (ms.halftime) {
+          score_halftime = { home: ms.halftime.home ?? null, away: ms.halftime.away ?? null };
+        }
+        if (ms.fulltime) {
+          score_fulltime = { home: ms.fulltime.home ?? null, away: ms.fulltime.away ?? null };
+        } else if (statusShort === 'FT') {
+          score_fulltime = { home: homeScore, away: awayScore };
+        }
+      }
+
+      let timeElapsedLegacy = (statusShort === 'NS') ? 'notstarted' : ((statusShort === 'FT') ? 'finished' : (liveMin ? liveMin + "'" : statusShort));
+      let finished = (statusShort === 'FT' || statusShort === 'AET' || statusShort === 'PEN') ? 'TRUE' : 'FALSE';
+
+      return {
+        ...m,
+        finished: finished,
+        time_elapsed: timeElapsedLegacy,
+        home_score: homeScore,
+        away_score: awayScore,
+        status_short: statusShort,
+        live_minute: liveMin,
+        iso_date: isoDate,
+        timestamp: timestamp,
+        score_halftime: score_halftime,
+        score_fulltime: score_fulltime,
+        score_extratime: { home: null, away: null },
+        score_penalty: { home: null, away: null }
+      };
+    });
+
+    liveMatchesCache = merged;
     liveCacheTime = now;
-    return liveMatchesCache;
-  } catch {
+    return merged;
+  } catch (err) {
+    console.error('Erro ao buscar jogos:', err.message);
     return liveMatchesCache || [];
   }
 }
@@ -120,15 +205,26 @@ app.get('/api/live-matches', async (req, res) => {
   const brMidnight = Date.UTC(brNow.getUTCFullYear(), brNow.getUTCMonth(), brNow.getUTCDate()) + brOffsetMs;
   const brNextMidnight = brMidnight + 86400000;
 
-  const live = matches.filter(m => m.time_elapsed && m.time_elapsed !== 'notstarted' && m.finished !== 'TRUE');
+  const live = matches.filter(m => {
+    if (m.finished === 'TRUE') return false;
+    if (m.time_elapsed && m.time_elapsed !== 'notstarted') return true;
+    const matchUtc = m.local_date ? parseMatchUTC(m.local_date, m.stadium_id) : null;
+    if (matchUtc !== null && matchUtc <= now) return true;
+    return false;
+  });
+  const liveIds = new Set(live.map(m => parseInt(m.id)));
   const today = matches.filter(m => {
+    if (liveIds.has(parseInt(m.id))) return false;
     if (!m.local_date) return false;
+    if (m.finished === 'TRUE') return false;
     const matchUtc = parseMatchUTC(m.local_date, m.stadium_id);
-    return matchUtc !== null && matchUtc >= brMidnight && matchUtc < brNextMidnight && m.time_elapsed === 'notstarted';
+    return matchUtc !== null && matchUtc >= brMidnight && matchUtc < brNextMidnight;
   });
   const upcoming = matches.filter(m => {
-    if (m.time_elapsed !== 'notstarted' || m.finished === 'TRUE') return false;
+    if (liveIds.has(parseInt(m.id))) return false;
+    if (m.finished === 'TRUE') return false;
     const matchUtc = m.local_date ? parseMatchUTC(m.local_date, m.stadium_id) : null;
+    if (matchUtc !== null && matchUtc <= now) return false;
     if (matchUtc !== null && matchUtc >= brMidnight && matchUtc < brNextMidnight) return false;
     return true;
   }).sort((a, b) => {
@@ -189,15 +285,11 @@ app.post('/api/predictions/groups', authMiddleware, async (req, res) => {
       startedCount[m.group] = (startedCount[m.group] || 0) + 1;
     }
   }
-  const locked = new Set();
-  for (const [group, count] of Object.entries(startedCount)) {
-    if (count >= 2) locked.add(group);
-  }
+  const allGroups = [...new Set(matches.filter(m => m.type === 'group').map(m => m.group))];
+  const allLocked = allGroups.length > 0 && allGroups.every(g => (startedCount[g] || 0) >= 2);
 
-  for (const p of predictions) {
-    if (locked.has(p.group_id)) {
-      return res.status(400).json({ error: `Grupo ${p.group_id} já começou, palpites bloqueados` });
-    }
+  if (allLocked) {
+    return res.status(400).json({ error: 'Todos os grupos já completaram 2 rodadas, palpites bloqueados' });
   }
 
   const records = predictions.map(p => ({
