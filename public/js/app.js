@@ -962,7 +962,7 @@ async function loadHistory() {
     h += `<div class="hist-card">
       <div class="hist-header">
         <span class="hist-stage">${STAGE_NAMES[m.type] || m.group || 'Jogo'}</span>
-        <span class="hist-date">${m.local_date || ''}</span>
+        <span class="hist-date">${formatMatchDate(m)}</span>
       </div>
       <div class="hist-teams">
         <span class="hist-team">${liveFlagImg(m.home_team_name_en)}${m.home_team_name_en}</span>

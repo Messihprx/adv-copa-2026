@@ -689,6 +689,7 @@ app.get('/api/history', authMiddleware, async (req, res) => {
       home_team_name_en: m.home_team_name_en, away_team_name_en: m.away_team_name_en,
       home_score: parseInt(m.home_score) || 0, away_score: parseInt(m.away_score) || 0,
       local_date: m.local_date, type: m.type, group: m.group,
+      iso_date: m.iso_date, timestamp: m.timestamp, stadium_id: m.stadium_id,
       user_prediction: pred ? { home_score: pred.home_score, away_score: pred.away_score } : null,
       points: 0
     };
@@ -708,7 +709,7 @@ app.get('/api/history', authMiddleware, async (req, res) => {
     }
     result.push(entry);
   }
-  result.sort((a, b) => b.id - a.id);
+  result.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   res.json(result);
 });
 
