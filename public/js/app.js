@@ -12,6 +12,7 @@ let lockedMatches = [];
 let liveInterval = null;
 let resultsInterval = null;
 let scoreUpdateInterval = null;
+let historyData = null;
 
 const FLAG_CODES = {
   'M\u00e9xico': 'mx', '\u00c1frica do Sul': 'za', 'Coreia do Sul': 'kr', 'Rep\u00fablica Tcheca': 'cz',
@@ -950,12 +951,14 @@ async function renderResults() {
   c.innerHTML = h;
 }
 
-async function loadHistory() {
+function renderHistory(data) {
   const c = document.getElementById('historyContainer');
-  const d = await apiCall('/history');
-  if (!d || !d.length) { c.innerHTML = '<div class="empty-state"><span class="icon">\uD83D\uDCC5</span><h3>Nenhum jogo encerrado</h3><p>Os jogos encerrados aparecer\u00e3o aqui com seus palpites e pontua\u00e7\u00e3o.</p></div>'; return; }
+  if (!data || !data.length) {
+    c.innerHTML = '<div class="empty-state"><span class="icon">\uD83D\uDCC5</span><h3>Nenhum jogo encontrado</h3><p>Tente alterar os filtros para ver mais resultados.</p></div>';
+    return;
+  }
   let h = '<div class="history-grid">';
-  for (const m of d) {
+  for (const m of data) {
     const pts = m.points || 0;
     const pf = pts === 10 ? '<span class="pts-badge pts-10">+10 Acerto exato!</span>' : pts === 5 ? '<span class="pts-badge pts-5">+5 Vencedor certo</span>' : '<span class="pts-badge pts-0">0 Errou</span>';
     const predHtml = m.user_prediction ? `<div class="hist-pred"><span class="hist-pred-label">Meu palpite:</span><strong>${m.user_prediction.home_score} x ${m.user_prediction.away_score}</strong></div>` : '<div class="hist-pred none">Sem palpite</div>';
@@ -976,6 +979,68 @@ async function loadHistory() {
     </div>`;
   }
   h += '</div>'; c.innerHTML = h;
+}
+
+function populateHistoryFilters(data) {
+  const countryDatalist = document.getElementById('countryList');
+  const dateEl = document.getElementById('filterDate');
+  if (!countryDatalist) return;
+
+  const teams = new Set();
+  for (const m of data) {
+    teams.add(m.home_team_name_en);
+    teams.add(m.away_team_name_en);
+  }
+
+  countryDatalist.innerHTML = '';
+  for (const t of [...teams].sort()) {
+    countryDatalist.innerHTML += `<option value="${t.replace(/"/g, '&quot;')}">`;
+  }
+
+  dateEl.value = '';
+}
+
+function filterHistory() {
+  if (!historyData) return;
+  const country = document.getElementById('filterCountry').value.trim().toLowerCase();
+  const group = document.getElementById('filterGroup').value;
+  const date = document.getElementById('filterDate').value;
+
+  let filtered = historyData;
+  if (country) {
+    filtered = filtered.filter(m =>
+      m.home_team_name_en.toLowerCase().includes(country) ||
+      m.away_team_name_en.toLowerCase().includes(country)
+    );
+  }
+  if (group) {
+    filtered = filtered.filter(m => m.type === 'group' && m.group === group);
+  }
+  if (date) {
+    filtered = filtered.filter(m => m.iso_date && m.iso_date.slice(0, 10) === date);
+  }
+  renderHistory(filtered);
+}
+
+function clearHistoryFilters() {
+  document.getElementById('filterCountry').value = '';
+  document.getElementById('filterGroup').value = '';
+  document.getElementById('filterDate').value = '';
+  document.getElementById('filterCountry').focus();
+  filterHistory();
+}
+
+async function loadHistory() {
+  const c = document.getElementById('historyContainer');
+  c.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+  const d = await apiCall('/history');
+  if (!d || !d.length) {
+    c.innerHTML = '<div class="empty-state"><span class="icon">\uD83D\uDCC5</span><h3>Nenhum jogo encerrado</h3><p>Os jogos encerrados aparecer\u00e3o aqui com seus palpites e pontua\u00e7\u00e3o.</p></div>';
+    return;
+  }
+  historyData = d;
+  populateHistoryFilters(d);
+  renderHistory(d);
 }
 
 async function loadLeaderboard() {

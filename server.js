@@ -10,6 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'copa2026-super-secret-key';
 const WC_API = 'https://worldcup26.ir';
+const MOCK_SCORES = require('./mock_scores.json');
 
 const STADIUM_TZ = {
   '1': -6, '2': -6, '3': -6, '4': -5, '5': -5, '6': -5,
@@ -34,7 +35,8 @@ const supabase = createClient(
 
 let liveMatchesCache = null;
 let liveCacheTime = 0;
-const CACHE_TTL = 30000;
+let cachePromise = null;
+const CACHE_TTL = 300000;
 
 app.use(cors());
 app.use(express.json());
@@ -55,11 +57,13 @@ function authMiddleware(req, res, next) {
 
 async function fetchMatches() {
   const now = Date.now();
-  const mockScores = require('./mock_scores.json');
   if (liveMatchesCache && (now - liveCacheTime) < CACHE_TTL) return liveMatchesCache;
 
-  try {
-    const res = await fetch(`${WC_API}/get/games`, {
+  if (cachePromise) return cachePromise;
+
+  cachePromise = (async () => {
+    try {
+      const res = await fetch(`${WC_API}/get/games`, {
       headers: { 'Accept': 'application/json' }
     });
     const data = await res.json();
@@ -111,8 +115,8 @@ async function fetchMatches() {
       let score_fulltime = { home: null, away: null };
 
       // Override with mock scores if available
-      if (mockScores && mockScores[m.id]) {
-        const ms = mockScores[m.id];
+      if (MOCK_SCORES && MOCK_SCORES[m.id]) {
+        const ms = MOCK_SCORES[m.id];
         if (typeof ms.home === 'number') homeScore = ms.home;
         if (typeof ms.away === 'number') awayScore = ms.away;
         if (ms.halftime) {
@@ -151,7 +155,11 @@ async function fetchMatches() {
   } catch (err) {
     console.error('Erro ao buscar jogos:', err.message);
     return liveMatchesCache || [];
+  } finally {
+    cachePromise = null;
   }
+  })();
+  return cachePromise;
 }
 
 // ===================== AUTH =====================
@@ -681,6 +689,7 @@ app.get('/api/history', authMiddleware, async (req, res) => {
   const predMap = {};
   if (predictions) for (const p of predictions) predMap[p.match_id] = p;
   const result = [];
+  const updates = [];
   for (const m of finished) {
     const mid = parseInt(m.id);
     const pred = predMap[mid];
@@ -704,11 +713,12 @@ app.get('/api/history', authMiddleware, async (req, res) => {
         entry.points = 5;
       }
       if (entry.points !== (pred.points || 0)) {
-        await supabase.from('match_predictions').update({ points: entry.points }).eq('id', pred.id);
+        updates.push(supabase.from('match_predictions').update({ points: entry.points }).eq('id', pred.id));
       }
     }
     result.push(entry);
   }
+  if (updates.length) await Promise.all(updates);
   result.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   res.json(result);
 });

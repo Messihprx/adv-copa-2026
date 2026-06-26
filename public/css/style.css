@@ -2288,6 +2288,70 @@ body::after {
 }
 
 /* ========== HISTORY ========== */
+.history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  align-items: center;
+}
+
+.history-filters select,
+.history-filters input[type="date"],
+.history-filters input[type="text"] {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: var(--transition);
+  min-width: 160px;
+}
+
+.history-filters select:focus,
+.history-filters input[type="date"]:focus,
+.history-filters input[type="text"]:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(247, 212, 74, 0.15);
+}
+
+.history-filters select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.history-filters input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .history-filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 12px;
+  }
+  .history-filters select,
+  .history-filters input[type="date"],
+  .history-filters input[type="text"] {
+    min-width: 0;
+    width: 100%;
+  }
+  .history-filters .btn {
+    width: 100%;
+  }
+}
+
 .history-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -2605,6 +2669,36 @@ body::after {
 
   .ko-sched-time {
     font-size: 10px;
+  }
+
+  .hist-card {
+    padding: 12px;
+  }
+  .hist-teams {
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+  }
+  .hist-team {
+    font-size: 13px;
+    font-weight: 600;
+    justify-content: center;
+  }
+  .hist-score {
+    font-size: 24px;
+    padding: 6px 20px;
+    background: rgba(247, 212, 74, 0.08);
+    border-radius: 10px;
+    align-self: center;
+    margin: 4px 0;
+  }
+  .hist-details {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+  .hist-pred {
+    align-items: center;
   }
 }
 
